@@ -17,4 +17,4 @@ resource "aws_instance" "web" {
 
   tags = { Name = "${var.project_name}-ec2" }
 }
-# Additional resources (e.g., security groups, EBS volumes) can be added here
+# Additional resources (e.g., security groups, EBS volumes) can be added here.
