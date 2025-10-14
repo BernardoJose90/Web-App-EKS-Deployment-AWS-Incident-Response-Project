@@ -1,0 +1,9 @@
+output "instance_id" { value = aws_instance.web.id }
+output "public_ip" { value = aws_instance.web.public_ip }
+output "private_ip" { value = aws_instance.web.private_ip }
+output "instance_arn" { value = aws_instance.web.arn }
+output "instance_public_dns" { value = aws_instance.web.public_dns }
+output "instance_state" { value = aws_instance.web.state }
+output "instance_availability_zone" { value = aws_instance.web.availability_zone }
+output "instance_type" { value = aws_instance.web.instance_type }
+output "instance_ami" { value = aws_instance.web.ami }  

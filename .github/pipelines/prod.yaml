@@ -1,0 +1,50 @@
+name: Prod Terraform + EKS CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  lint:
+    uses: ../templates/lint.yml
+
+  plan:
+    needs: lint
+    uses: ../templates/init_plan.yml
+    with:
+      backend_file: terraform/environments/prod/backend.tfvars
+      tfvars_file: terraform/environments/prod/prod.tfvars
+
+  approve_apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup AWS CLI
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-2
+
+      - name: Manual Approval
+        uses: hmarr/auto-approve-action@v2
+        with:
+          message: "Approve applying Terraform changes to production"
+
+      - name: Apply Terraform Plan
+        run: terraform apply tfplan
+
+      - name: Generate kubeconfig
+        run: |
+          export KUBECONFIG=terraform/modules/eks/kubeconfig_my-cluster.yaml
+          kubectl get nodes
+
+      - name: Upload kubeconfig to S3 (encrypted)
+        run: |
+          aws s3 cp terraform/modules/eks/kubeconfig_my-cluster.yaml \
+            s3://my-ci-cd-artifacts/prod/kubeconfig.yaml \
+            --sse aws:kms
