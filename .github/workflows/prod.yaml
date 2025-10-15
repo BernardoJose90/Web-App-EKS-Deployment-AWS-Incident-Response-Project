@@ -1,65 +1,68 @@
-name: Prod Terraform + EKS CI
+name: "Prod Terraform + EKS CI"
 
 on:
   push:
     branches:
-      - main
+      - "main"
 
 jobs:
   apply:
     runs-on: ubuntu-latest
-    environment: production
+    environment: "production"
 
     steps:
-      # 1️⃣ Checkout the code
-      - name: Checkout code
+      # 1️⃣ Checkout code
+      - name: "Checkout code"
         uses: actions/checkout@v4
 
       # 2️⃣ Configure AWS credentials via OIDC
-      - name: Configure AWS credentials using OIDC
+      - name: "Configure AWS credentials using OIDC"
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::851725622142:role/GitHubActionsRole
-          aws-region: eu-west-2
-          role-session-name: github-actions
+          role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
+          aws-region: "eu-west-2"
+          role-session-name: "github-actions"
+          audience: "sts.amazonaws.com"
 
-      # 2a️⃣ Debug: Check OIDC token
-      - name: Print OIDC environment variables
+      # 2a️⃣ Debug: Print OIDC-related environment variables
+      - name: "Debug: Print OIDC environment variables"
         run: |
           echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
           echo "GITHUB_REF=$GITHUB_REF"
           echo "GITHUB_SHA=$GITHUB_SHA"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
           echo "ACTIONS_ID_TOKEN_REQUEST_URL=$ACTIONS_ID_TOKEN_REQUEST_URL"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
 
-      # 2b️⃣ Debug: Verify AWS credentials (STS call)
-      - name: Verify AWS credentials
+      # 2b️⃣ Debug: Verify AWS credentials
+      - name: "Debug: Verify AWS credentials"
         run: |
           set -e
           echo "Testing AWS credentials..."
           aws sts get-caller-identity || echo "Failed to assume role!"
 
-      # 3️⃣ Install jq
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
+      # 3️⃣ Install jq (needed for parsing JSON from Secrets Manager)
+      - name: "Install jq"
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
 
-      # 4️⃣ Fetch KMS Key from Secrets Manager
-      - name: Get KMS Key from Secrets Manager
+      # 4️⃣ Fetch KMS Key from AWS Secrets Manager
+      - name: "Get KMS Key from Secrets Manager"
         id: get_kms
         run: |
           kms_key=$(aws secretsmanager get-secret-value \
-            --secret-id prod/kms-key \
+            --secret-id "prod/kms-key" \
             --query SecretString \
             --output text | jq -r '.KMS_KEY_ID')
           echo "KMS_KEY=$kms_key" >> $GITHUB_ENV
 
       # 5️⃣ Run reusable Terraform apply workflow
-      - name: Apply Terraform
+      - name: "Apply Terraform"
         uses: ./.github/workflows/apply.yml
         with:
-          backend_file: environments/prod/backend.tfvars
-          tfvars_file: environments/prod/prod.tfvars
-          environment_name: production
-          cluster_name: my-cluster
-          s3_bucket: my-ci-cd-artifacts
-          kms_key_id: ${{ env.KMS_KEY }}
+          backend_file: "environments/prod/backend.tfvars"
+          tfvars_file: "environments/prod/prod.tfvars"
+          environment_name: "production"
+          cluster_name: "my-cluster"
+          s3_bucket: "my-ci-cd-artifacts"
+          kms_key_id: "${{ env.KMS_KEY }}"
