@@ -31,7 +31,7 @@ jobs:
             --output text | jq -r '.KMS_KEY_ID')
           echo "KMS_KEY=$kms_key" >> $GITHUB_ENV
 
-      # Run reusable apply workflow.
+      # Run reusable apply workflow..
       - name: Apply Terraform
         uses: ./.github/workflows/apply.yml
         with:
