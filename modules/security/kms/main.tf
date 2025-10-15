@@ -16,6 +16,10 @@ resource "aws_kms_key" "ci_cd" {
     Environment = "prod"
     ManagedBy   = "Terraform"
   }
+  lifecycle {
+    prevent_destroy = true   # prevents accidental 'terraform destroy'
+    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
+  }
 }
 
 output "kms_key_id" {

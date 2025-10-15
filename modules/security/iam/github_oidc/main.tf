@@ -30,6 +30,10 @@ resource "aws_iam_role" "github_actions_role" {
       }
     ]
   })
+    lifecycle {
+    prevent_destroy = true   # prevents accidental 'terraform destroy'
+    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
+  }
 }
 
 # Least-privilege policy for GitHub Actions
@@ -88,12 +92,20 @@ resource "aws_iam_policy" "github_actions_policy" {
       }
     ]
   })
+    lifecycle {
+    prevent_destroy = true   # prevents accidental 'terraform destroy'
+    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
+  }
 }
 
 # Attach the policy to the role
 resource "aws_iam_role_policy_attachment" "attach_github_policy" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_actions_policy.arn
+  lifecycle {
+    prevent_destroy = true   # prevents accidental 'terraform destroy'
+    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
+  }
 }
 
 
