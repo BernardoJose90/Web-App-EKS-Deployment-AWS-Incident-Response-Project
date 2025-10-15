@@ -18,6 +18,9 @@ on:
       s3_bucket:
         required: true
         type: string
+      kms_key_arn:
+        required: true
+        type: string
       kms_key_id:
         required: true
         type: string
@@ -32,7 +35,15 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v4
 
-      # 2️⃣ Debug: Print input variables
+      # 2️⃣ Configure AWS credentials (inherit from parent)
+      - name: "Configure AWS credentials"
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
+          aws-region: "eu-west-2"
+          role-session-name: "github-actions-${{ github.sha }}"
+
+      # 3️⃣ Debug: Print input variables
       - name: "Print inputs"
         run: |
           echo "backend_file=${{ inputs.backend_file }}"
@@ -40,34 +51,56 @@ jobs:
           echo "environment_name=${{ inputs.environment_name }}"
           echo "cluster_name=${{ inputs.cluster_name }}"
           echo "s3_bucket=${{ inputs.s3_bucket }}"
+          echo "kms_key_arn=${{ inputs.kms_key_arn }}"
           echo "kms_key_id=${{ inputs.kms_key_id }}"
 
-      # 3️⃣ Fetch AWS Account ID
+      # 4️⃣ Setup Terraform
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.0"
+
+      # 5️⃣ Fetch AWS Account ID
       - name: "Get AWS Account ID"
         id: get_account
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+          echo "Account ID: $AWS_ACCOUNT_ID"
 
-      # 4️⃣ Terraform init
+      # 6️⃣ Terraform init
       - name: "Terraform Init"
         run: terraform init -backend-config="${{ inputs.backend_file }}"
 
-      # 5️⃣ Terraform apply
-      - name: "Terraform Apply"
-        run: terraform apply -var-file="${{ inputs.tfvars_file }}" -auto-approve tfplan
+      # 7️⃣ Terraform plan
+      - name: "Terraform Plan"
+        run: terraform plan -var-file="${{ inputs.tfvars_file }}" -out=tfplan
 
-      # 6️⃣ Generate kubeconfig
+      # 8️⃣ Terraform apply
+      - name: "Terraform Apply"
+        run: terraform apply -auto-approve tfplan
+
+      # 9️⃣ Generate kubeconfig (using aws eks update-kubeconfig)
       - name: "Generate kubeconfig"
         run: |
-          export KUBECONFIG="terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml"
+          # Update kubeconfig for the EKS cluster
+          aws eks update-kubeconfig \
+            --region eu-west-2 \
+            --name ${{ inputs.cluster_name }}
+          
+          # Verify cluster access
           kubectl get nodes || echo "kubectl check failed!"
 
-      # 7️⃣ Upload kubeconfig to S3 with KMS encryption
+      # 🔟 Upload kubeconfig to S3 with KMS encryption
       - name: "Upload kubeconfig to S3"
         run: |
-        
-          aws s3 cp "terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml" \
+          # Get the current kubeconfig and save it
+          kubectl config view --minify --flatten > kubeconfig_${{ inputs.cluster_name }}.yaml
+          
+          # Upload to S3 with KMS encryption
+          aws s3 cp kubeconfig_${{ inputs.cluster_name }}.yaml \
             "s3://${{ inputs.s3_bucket }}/${{ inputs.environment_name }}/kubeconfig.yaml" \
             --sse aws:kms \
-            --sse-kms-key-id "arn:aws:kms:eu-west-2:${{ env.AWS_ACCOUNT_ID }}:key/${{ inputs.kms_key_id }}"
+            --sse-kms-key-id "${{ inputs.kms_key_arn }}"
+          
+          echo "Kubeconfig uploaded to S3 with KMS encryption"
