@@ -32,10 +32,9 @@ jobs:
         id: aws_creds
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
+          
           aws-region: "eu-west-2"
-          role-session-name: "github-actions"
-          audience: "sts.amazonaws.com"
+          role-to-assume: arn:aws:iam::851725622142:role/GitHubActions-EKS-Role
 
       # 4️⃣ Debug: Verify AWS credentials
       - name: "Debug: Verify AWS credentials"
