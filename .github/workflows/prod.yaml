@@ -10,19 +10,16 @@ permissions:
   contents: read
 
 jobs:
-  # Job to prepare and get KMS key
-  prepare:
+  apply:
     runs-on: ubuntu-latest
     environment: "production"
-    outputs:
-      kms_key_arn: ${{ steps.get_kms.outputs.kms_key_arn }}
-      kms_key_id: ${{ steps.get_kms.outputs.kms_key_id }}
-    
-    steps:
 
+    steps:
+      # 1️⃣ Checkout the code
       - name: "Checkout code"
         uses: actions/checkout@v4
 
+      # 2️⃣ Configure AWS credentials via OIDC
       - name: "Configure AWS credentials using OIDC"
       
         uses: aws-actions/configure-aws-credentials@v2
@@ -30,10 +27,13 @@ jobs:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
           aws-region: "eu-west-2"
           role-session-name: "github-actions-${{ github.sha }}"
+          audience: "sts.amazonaws.com"
 
+      # 3️⃣ Install jq for Secrets Manager
       - name: "Install jq"
         run: sudo apt-get install -y jq
 
+      # 4️⃣ Fetch KMS Key ARN from Secrets Manager
       - name: "Get KMS Key ARN from Secrets Manager"
         id: get_kms
         run: |
@@ -41,23 +41,41 @@ jobs:
             --secret-id "prod/kms-key" \
             --query SecretString \
             --output text | jq -r '.KMS_KEY_ARN')
-          
+          echo "KMS_KEY_ARN=$kms_key_arn" >> $GITHUB_ENV
           kms_key_id=$(echo "$kms_key_arn" | cut -d'/' -f2)
-          
-          echo "kms_key_arn=$kms_key_arn" >> $GITHUB_OUTPUT
-          echo "kms_key_id=$kms_key_id" >> $GITHUB_OUTPUT
+          echo "KMS_KEY_ID=$kms_key_id" >> $GITHUB_ENV
 
-  # Job that calls the reusable workflow
-  terraform-apply:
-    needs: prepare
-    uses: ./.github/workflows/apply.yaml
-    with:
-      backend_file: "environments/prod/backend.tfvars"
-      tfvars_file: "environments/prod/prod.tfvars"
-      environment_name: "production"
-      cluster_name: "my-cluster"
-      s3_bucket: "my-ci-cd-artifacts"
-      kms_key_arn: ${{ needs.prepare.outputs.kms_key_arn }}
-      kms_key_id: ${{ needs.prepare.outputs.kms_key_id }}
-    secrets: inherit
-    
+      # 5️⃣ Setup Terraform
+      - name: "Setup Terraform"
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: "1.5.0"
+
+      # 6️⃣ Terraform steps - run from environments/prod directory
+      - name: "Terraform Init"
+        working-directory: environments/prod
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Terraform files:"
+          ls -la *.tf
+          terraform init -backend-config="backend.tfvars"
+
+      - name: "Terraform Plan"
+        working-directory: environments/prod
+        run: |
+          echo "Running Terraform plan from: $(pwd)"
+          terraform plan -var-file="prod.tfvars" -out=tfplan
+
+      - name: "Terraform Apply"
+        working-directory: environments/prod
+        run: terraform apply -auto-approve tfplan
+
+      # 7️⃣ Debug: List created resources
+      - name: "Debug: List Terraform resources"
+        working-directory: environments/prod
+        run: |
+          echo "=== Terraform State List ==="
+          terraform state list || echo "No resources in state yet"
+          
+          echo "=== AWS EKS Clusters ==="
+          aws eks list-clusters --region eu-west-2 || echo "EKS command failed - may not have clusters yet"
