@@ -23,3 +23,8 @@ variable "eks_public_subnets_london" { type = list(string) }
 variable "eks_private_subnets_london" { type = list(string) }
 variable "azs_london" { type = list(string) }
 
+variable "bucket_name" {
+  description = "The name of the S3 bucket for CI/CD artifacts"
+  type        = string
+  default     = "my-ci-cd-artifacts"
+}

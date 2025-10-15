@@ -19,6 +19,14 @@ module "vpc_london" {
   region              = "eu-west-2"
 }
 
+module "s3_bucket" {
+  source    = "../../modules/storage/s3"
+  providers = { aws = aws.london }
+
+  bucket_name = var.bucket_name
+  
+}
+
 output "vpc_id" {
   value       = module.vpc_london.vpc_id
   description = "VPC ID for the London environment"
