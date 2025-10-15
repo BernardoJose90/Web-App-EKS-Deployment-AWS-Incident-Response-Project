@@ -1,0 +1,82 @@
+name: Prod Terraform + EKS CI
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+
+  # 1️⃣ Lint Terraform code
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Init
+        run: terraform init -backend=false
+
+  # 2️⃣ Terraform Plan
+  plan:
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.7.5
+
+      - name: Terraform Init with Backend
+        run: terraform init -backend-config=terraform/environments/prod/backend.tfvars
+
+      - name: Terraform Plan
+        run: terraform plan -var-file=terraform/environments/prod/prod.tfvars -out=tfplan
+
+  # 3️⃣ Manual approval & Apply
+  approve_apply:
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Assume IAM role via OIDC
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: eu-west-2
+
+      # Manual approval before production apply
+      - name: Manual Approval
+        uses: hmarr/auto-approve-action@v2
+
+      # Apply Terraform Plan
+      - name: Apply Terraform Plan
+        run: terraform apply tfplan
+
+      # Generate kubeconfig
+      - name: Generate kubeconfig
+        run: |
+          export KUBECONFIG=terraform/modules/eks/kubeconfig_my-cluster.yaml
+          kubectl get nodes
+
+      # Upload kubeconfig to S3 (encrypted with KMS)
+      - name: Upload kubeconfig to S3
+        run: |
+          aws s3 cp terraform/modules/eks/kubeconfig_my-cluster.yaml \
+            s3://my-ci-cd-artifacts/prod/kubeconfig.yaml \
+            --sse aws:kms \
+            --sse-kms-key-id arn:aws:kms:eu-west-2:${{ secrets.AWS_ACCOUNT_ID }}:key/${{ secrets.KMS_KEY_ID }}
