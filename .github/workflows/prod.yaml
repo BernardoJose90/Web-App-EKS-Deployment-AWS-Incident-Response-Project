@@ -17,8 +17,9 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          role-to-assume: arn:aws:iam::851725622142:role/GitHubActionsRole
           aws-region: eu-west-2
+    
 
       # Fetch KMS Key from AWS Secrets Manager
       - name: Get KMS Key from Secrets Manager
@@ -30,7 +31,7 @@ jobs:
             --output text | jq -r '.KMS_KEY_ID')
           echo "KMS_KEY=$kms_key" >> $GITHUB_ENV
 
-      # Run reusable apply workflow
+      # Run reusable apply workflow.
       - name: Apply Terraform
         uses: ./.github/workflows/apply.yml
         with:
