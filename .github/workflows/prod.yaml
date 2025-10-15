@@ -67,9 +67,9 @@ jobs:
           echo "KMS_KEY_ID=$kms_key_id" >> $GITHUB_ENV
           echo "Extracted KMS Key ID: $kms_key_id"
 
-      # 7️⃣ Call reusable Terraform apply workflow (FIXED PATH)
+      # 7️⃣ Call composite action (FIXED)
       - name: "Apply Terraform"
-        uses: ./.github/workflows/apply.yml
+        uses: ./.github/actions/terraform-apply
         with:
           backend_file: "environments/prod/backend.tfvars"
           tfvars_file: "environments/prod/prod.tfvars"
