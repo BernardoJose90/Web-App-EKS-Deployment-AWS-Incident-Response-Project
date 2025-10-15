@@ -59,6 +59,7 @@ module "eks_cluster" {
   tags                  = var.tags
 }
 
+# Outputs - ONLY ONE SET!
 output "vpc_id" {
   value       = module.vpc_london.vpc_id
   description = "VPC ID for the London environment"
@@ -72,34 +73,20 @@ output "public_subnets" {
 output "eks_private_subnets" {
   value       = module.vpc_london.eks_private_subnets
   description = "EKS Private subnet IDs"
-
 }
 
 output "eks_public_subnets" {
   value       = module.vpc_london.eks_public_subnets
   description = "EKS Public subnet IDs"
-
 }
 
-output "vpc_id" {
-  value       = module.vpc_london.vpc_id
-  description = "VPC ID for the London environment"
+# EKS Cluster Outputs
+output "eks_cluster_endpoint" {
+  description = "EKS Cluster endpoint"
+  value       = module.eks_cluster.cluster_endpoint
 }
 
-output "public_subnets" {
-  value       = module.vpc_london.public_subnets
-  description = "Public subnet IDs"
+output "eks_cluster_name" {
+  description = "EKS Cluster name"
+  value       = module.eks_cluster.cluster_name
 }
-
-output "eks_private_subnets" {
-  value       = module.vpc_london.eks_private_subnets
-  description = "EKS Private subnet IDs"
-
-}
-
-output "eks_public_subnets" {
-  value       = module.vpc_london.eks_public_subnets
-  description = "EKS Public subnet IDs"
-
-}
-
