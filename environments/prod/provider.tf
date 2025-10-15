@@ -6,7 +6,7 @@ provider "aws" {
   region = "eu-west-2"
 }
 
-# Ireland region provider (if needed)
+# Ireland region provider (if needed).
 provider "aws" {
   alias  = "ireland"
   region = "eu-west-1"
