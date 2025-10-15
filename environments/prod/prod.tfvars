@@ -25,3 +25,10 @@ github_branch         = "main"
 # KMS key ID for encrypting S3 objects. This will be fetched from the KMS module output.
 
 
+# EKS Cluster Configuration
+cluster_name          = "prod-eks-cluster"
+cluster_version       = "1.30"  # Changed from 1.34 to available version
+node_instance_type    = "t3.medium"
+node_desired_capacity = 2
+node_min_size         = 1
+node_max_size         = 3
