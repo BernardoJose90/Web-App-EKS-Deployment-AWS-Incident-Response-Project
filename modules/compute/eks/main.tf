@@ -1,7 +1,11 @@
-provider "aws" {
-  region = var.region
+terraform {
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.16"
+    }
+  }
 }
-
 # Generate kubeconfig for EKS cluster
 data "aws_eks_cluster" "cluster" {
   name = aws_eks_cluster.this.name
@@ -18,14 +22,14 @@ resource "local_file" "kubeconfig" {
       {
         name = aws_eks_cluster.this.name
         cluster = {
-          server                   = data.aws_eks_cluster.cluster.endpoint
+          server                     = data.aws_eks_cluster.cluster.endpoint
           certificate-authority-data = data.aws_eks_cluster.cluster.certificate_authority[0].data
         }
       }
     ]
     contexts = [
       {
-        name    = "${aws_eks_cluster.this.name}-context"
+        name = "${aws_eks_cluster.this.name}-context"
         context = {
           cluster = aws_eks_cluster.this.name
           user    = "${aws_eks_cluster.this.name}-user"
