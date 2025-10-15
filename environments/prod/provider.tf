@@ -12,7 +12,7 @@ provider "aws" {
   region = "eu-west-1"
 }
 
-# Default AWS provider (optional, if some modules use it)
+# Default AWS provider (optional, if some modules use it).
 provider "aws" {
   region = "eu-west-2"
 }
