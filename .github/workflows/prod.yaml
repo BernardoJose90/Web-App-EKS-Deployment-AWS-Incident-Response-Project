@@ -9,19 +9,25 @@ jobs:
   apply:
     runs-on: ubuntu-latest
     environment: production
+
     steps:
+      # 1️⃣ Checkout the code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Configure AWS credentials via OIDC
+      # 2️⃣ Configure AWS credentials via OIDC
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::851725622142:role/GitHubActionsRole
           aws-region: eu-west-2
-    
+          role-session-name: github-actions
 
-      # Fetch KMS Key from AWS Secrets Manager
+      # 3️⃣ Install jq (needed for parsing JSON)
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq
+
+      # 4️⃣ Fetch KMS Key from Secrets Manager
       - name: Get KMS Key from Secrets Manager
         id: get_kms
         run: |
@@ -31,7 +37,7 @@ jobs:
             --output text | jq -r '.KMS_KEY_ID')
           echo "KMS_KEY=$kms_key" >> $GITHUB_ENV
 
-      # Run reusable apply workflow..
+      # 5️⃣ Run reusable Terraform apply workflow
       - name: Apply Terraform
         uses: ./.github/workflows/apply.yml
         with:
