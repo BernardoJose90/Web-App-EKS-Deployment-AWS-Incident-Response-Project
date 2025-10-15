@@ -10,72 +10,54 @@ permissions:
   contents: read
 
 jobs:
-  apply:
+  # Job to prepare and get KMS key
+  prepare:
     runs-on: ubuntu-latest
     environment: "production"
-
+    outputs:
+      kms_key_arn: ${{ steps.get_kms.outputs.kms_key_arn }}
+      kms_key_id: ${{ steps.get_kms.outputs.kms_key_id }}
+    
     steps:
-      # 1️⃣ Checkout the code
+
       - name: "Checkout code"
         uses: actions/checkout@v4
 
-      # 2️⃣ Debug: Print GitHub environment info
-      - name: "Debug: GitHub env info"
-        run: |
-          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
-          echo "GITHUB_REF=$GITHUB_REF"
-          echo "GITHUB_SHA=$GITHUB_SHA"
-          echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
-
-      # 3️⃣ Configure AWS credentials via OIDC
       - name: "Configure AWS credentials using OIDC"
-        id: aws_creds
+      
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
           aws-region: "eu-west-2"
           role-session-name: "github-actions-${{ github.sha }}"
-          audience: "sts.amazonaws.com"
 
-      # 4️⃣ Debug: Verify AWS credentials
-      - name: "Debug: Verify AWS credentials"
-        run: |
-          echo "Testing AWS credentials..."
-          aws sts get-caller-identity
-
-      # 5️⃣ Install jq for Secrets Manager
       - name: "Install jq"
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y jq
+        run: sudo apt-get install -y jq
 
-      # 6️⃣ Fetch KMS Key ARN from Secrets Manager
       - name: "Get KMS Key ARN from Secrets Manager"
         id: get_kms
         run: |
-          # Get the KMS Key ARN directly from the secret
           kms_key_arn=$(aws secretsmanager get-secret-value \
             --secret-id "prod/kms-key" \
             --query SecretString \
             --output text | jq -r '.KMS_KEY_ARN')
           
-          echo "KMS_KEY_ARN=$kms_key_arn" >> $GITHUB_ENV
-          echo "Fetched KMS Key ARN: $kms_key_arn"
-          
-          # Also extract just the key ID for any components that need it
           kms_key_id=$(echo "$kms_key_arn" | cut -d'/' -f2)
-          echo "KMS_KEY_ID=$kms_key_id" >> $GITHUB_ENV
-          echo "Extracted KMS Key ID: $kms_key_id"
-
-      # 7️⃣ Call composite action (FIXED)
-      - name: "Apply Terraform"
-        uses: ./.github/actions/terraform-apply
-        with:
-          backend_file: "environments/prod/backend.tfvars"
-          tfvars_file: "environments/prod/prod.tfvars"
-          environment_name: "production"
-          cluster_name: "my-cluster"
-          s3_bucket: "my-ci-cd-artifacts"
-          kms_key_arn: "${{ env.KMS_KEY_ARN }}"
-          kms_key_id: "${{ env.KMS_KEY_ID }}"
           
+          echo "kms_key_arn=$kms_key_arn" >> $GITHUB_OUTPUT
+          echo "kms_key_id=$kms_key_id" >> $GITHUB_OUTPUT
+
+  # Job that calls the reusable workflow
+  terraform-apply:
+    needs: prepare
+    uses: ./.github/workflows/apply.yaml
+    with:
+      backend_file: "environments/prod/backend.tfvars"
+      tfvars_file: "environments/prod/prod.tfvars"
+      environment_name: "production"
+      cluster_name: "my-cluster"
+      s3_bucket: "my-ci-cd-artifacts"
+      kms_key_arn: ${{ needs.prepare.outputs.kms_key_arn }}
+      kms_key_id: ${{ needs.prepare.outputs.kms_key_id }}
+    secrets: inherit
+    
