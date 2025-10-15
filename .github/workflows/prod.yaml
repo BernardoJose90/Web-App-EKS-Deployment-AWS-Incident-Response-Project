@@ -21,7 +21,6 @@ jobs:
 
       # 2️⃣ Configure AWS credentials via OIDC
       - name: "Configure AWS credentials using OIDC"
-      
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
@@ -51,14 +50,17 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
-      # 6️⃣ Terraform steps - run from environments/prod directory
+      # 6️⃣ Terraform Init with production backend config
       - name: "Terraform Init"
         working-directory: environments/prod
         run: |
           echo "Current directory: $(pwd)"
           echo "Terraform files:"
           ls -la *.tf
-          terraform init -backend-config="backend.tfvars"
+          terraform init \
+            -backend-config="bucket=cloudsec-project-tfstate" \
+            -backend-config="key=prod/terraform.tfstate" \
+            -backend-config="region=eu-west-2"
 
       - name: "Terraform Plan"
         working-directory: environments/prod
@@ -79,3 +81,4 @@ jobs:
           
           echo "=== AWS EKS Clusters ==="
           aws eks list-clusters --region eu-west-2 || echo "EKS command failed - may not have clusters yet"
+          
