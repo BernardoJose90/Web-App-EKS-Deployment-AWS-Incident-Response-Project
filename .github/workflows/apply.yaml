@@ -39,18 +39,16 @@ jobs:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
           aws-region: "eu-west-2"
           role-session-name: "github-actions"
-          audience: "sts.amazonaws.com"
 
-      # 2a️⃣ Debug: Verify AWS credentials
+      # 3️⃣ Debug: Verify AWS credentials
       - name: "Debug: Verify AWS credentials"
         run: |
           echo "Testing AWS credentials..."
-          aws sts get-caller-identity || echo "Failed to assume role!"
+          aws sts get-caller-identity || echo "❌ Failed to assume role!"
 
-      # 2b️⃣ Debug: Print environment info
-      - name: "Debug: Print environment variables"
+      # 4️⃣ Print workflow inputs
+      - name: "Debug: Print inputs"
         run: |
-          echo "Inputs:"
           echo "backend_file=${{ inputs.backend_file }}"
           echo "tfvars_file=${{ inputs.tfvars_file }}"
           echo "environment_name=${{ inputs.environment_name }}"
@@ -58,29 +56,28 @@ jobs:
           echo "s3_bucket=${{ inputs.s3_bucket }}"
           echo "kms_key_id=${{ inputs.kms_key_id }}"
 
-      # 3️⃣ Fetch AWS Account ID
+      # 5️⃣ Fetch AWS account ID
       - name: "Get AWS Account ID"
         id: get_account
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
-          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
 
-      # 4️⃣ Terraform init
+      # 6️⃣ Terraform init
       - name: "Terraform Init"
         run: terraform init -backend-config="${{ inputs.backend_file }}"
 
-      # 5️⃣ Terraform apply
+      # 7️⃣ Terraform apply
       - name: "Terraform Apply"
         run: terraform apply -var-file="${{ inputs.tfvars_file }}" -auto-approve tfplan
 
-      # 6️⃣ Generate kubeconfig
+      # 8️⃣ Generate kubeconfig
       - name: "Generate kubeconfig"
         run: |
           export KUBECONFIG="terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml"
           kubectl get nodes || echo "kubectl check failed!"
 
-      # 7️⃣ Upload kubeconfig to S3 with KMS encryption
+      # 9️⃣ Upload kubeconfig to S3 with KMS encryption
       - name: "Upload kubeconfig to S3"
         run: |
           echo "Uploading kubeconfig using KMS key: ${{ inputs.kms_key_id }}"
