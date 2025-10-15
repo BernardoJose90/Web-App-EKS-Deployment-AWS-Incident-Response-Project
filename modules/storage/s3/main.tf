@@ -7,9 +7,13 @@ terraform {
   }
 }
 
+data "aws_caller_identity" "current" {}
+
+
 # Create the S3 bucket
 resource "aws_s3_bucket" "artifacts" {
-  bucket = var.bucket_name
+  bucket =   "my-ci-cd-artifacts-${data.aws_caller_identity.current.account_id}-eu-west-2"  # Example: my-ci-cd-artifacts-123456789012-eu-west-2}"
+
 
   # Prevent accidental deletion in prod
   force_destroy = false

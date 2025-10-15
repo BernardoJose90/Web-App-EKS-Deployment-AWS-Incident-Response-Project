@@ -23,28 +23,39 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup AWS CLI
+      # 1️⃣ Assume IAM role via OIDC
+      - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: eu-west-2
 
+      # 2️⃣ Dynamically fetch AWS Account ID
+      - name: Get AWS Account ID
+        id: get_account
+        run: |
+          echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+
+      # 3️⃣ Manual approval before production apply
       - name: Manual Approval
         uses: hmarr/auto-approve-action@v2
         with:
           message: "Approve applying Terraform changes to production"
 
+      # 4️⃣ Apply Terraform Plan
       - name: Apply Terraform Plan
         run: terraform apply tfplan
 
+      # 5️⃣ Generate kubeconfig
       - name: Generate kubeconfig
         run: |
           export KUBECONFIG=terraform/modules/eks/kubeconfig_my-cluster.yaml
           kubectl get nodes
 
-      - name: Upload kubeconfig to S3 (encrypted)
+      # 6️⃣ Upload kubeconfig to S3 (encrypted with KMS)
+      - name: Upload kubeconfig to S3
         run: |
           aws s3 cp terraform/modules/eks/kubeconfig_my-cluster.yaml \
             s3://my-ci-cd-artifacts/prod/kubeconfig.yaml \
-            --sse aws:kms
+            --sse aws:kms \
+            --sse-kms-key-id arn:aws:kms:eu-west-2:${{ env.AWS_ACCOUNT_ID }}:key/${{ secrets.KMS_KEY_ID }}
