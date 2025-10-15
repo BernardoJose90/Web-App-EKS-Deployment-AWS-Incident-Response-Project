@@ -1,0 +1,68 @@
+name: Terraform Apply
+
+on:
+  workflow_call:
+    inputs:
+      backend_file:
+        required: true
+        type: string
+      tfvars_file:
+        required: true
+        type: string
+      environment_name:
+        required: true
+        type: string
+      cluster_name:
+        required: true
+        type: string
+      s3_bucket:
+        required: true
+        type: string
+      kms_key_id:
+        required: true
+        type: string
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment_name }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Configure AWS credentials via OIDC
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
+          aws-region: eu-west-2
+
+      # Fetch AWS account ID dynamically
+      - name: Get AWS Account ID
+        id: get_account
+        run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
+
+      # Terraform init & plan apply
+      - name: Terraform Init
+        run: terraform init -backend-config=${{ inputs.backend_file }}
+
+      - name: Terraform Apply
+        run: terraform apply -var-file=${{ inputs.tfvars_file }} -auto-approve tfplan
+
+      # Generate kubeconfig
+      - name: Generate kubeconfig
+
+        run: |
+          export KUBECONFIG=terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml
+          kubectl get nodes
+
+      # Upload kubeconfig to S3 with KMS encryption
+      - name: Upload kubeconfig to S3
+      
+        run: |
+          aws s3 cp terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml \
+            s3://${{ inputs.s3_bucket }}/${{ inputs.environment_name }}/kubeconfig.yaml \
+            --sse aws:kms \
+            --sse-kms-key-id arn:aws:kms:eu-west-2:${{ env.AWS_ACCOUNT_ID }}:key/${{ inputs.kms_key_id }}

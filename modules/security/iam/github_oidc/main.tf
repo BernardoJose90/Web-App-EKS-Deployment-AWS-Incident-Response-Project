@@ -1,14 +1,3 @@
-terraform {
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 6.16"
-    }
-  }
-}
-
-data "aws_caller_identity" "current" {}
-
 # IAM Role for GitHub Actions OIDC
 resource "aws_iam_role" "github_actions_role" {
   name = "GitHubActionsRole"
@@ -30,10 +19,6 @@ resource "aws_iam_role" "github_actions_role" {
       }
     ]
   })
-  lifecycle {
-    prevent_destroy = true   # prevents accidental 'terraform destroy'
-    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
-  }
 }
 
 # Least-privilege policy for GitHub Actions
@@ -44,6 +29,7 @@ resource "aws_iam_policy" "github_actions_policy" {
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
+      # EC2 and EKS permissions (as before)
       {
         Effect = "Allow"
         Action = [
@@ -73,6 +59,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         ]
         Resource = "*"
       },
+      # S3 permissions
       {
         Effect = "Allow"
         Action = [
@@ -82,6 +69,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         ]
         Resource = "arn:aws:s3:::my-ci-cd-artifacts/prod/*"
       },
+      # KMS permissions
       {
         Effect = "Allow"
         Action = [
@@ -89,23 +77,22 @@ resource "aws_iam_policy" "github_actions_policy" {
           "kms:GenerateDataKey"
         ]
         Resource = "arn:aws:kms:eu-west-2:${data.aws_caller_identity.current.account_id}:key/${var.kms_key_id}"
+      },
+      # Secrets Manager permissions
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue"
+        ]
+        Resource = "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key-*"
       }
     ]
   })
-  lifecycle {
-    prevent_destroy = true   # prevents accidental 'terraform destroy'
-    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
-  }
+  
 }
 
 # Attach the policy to the role
 resource "aws_iam_role_policy_attachment" "attach_github_policy" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_actions_policy.arn
-  lifecycle {
-    prevent_destroy = true   # prevents accidental 'terraform destroy'
-    ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
-  }
 }
-
-

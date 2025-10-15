@@ -15,6 +15,7 @@ resource "aws_kms_key" "ci_cd" {
   tags = {
     Environment = "prod"
     ManagedBy   = "Terraform"
+    Name        = "ci-cd-kms-key"
   }
   lifecycle {
     prevent_destroy = true   # prevents accidental 'terraform destroy'

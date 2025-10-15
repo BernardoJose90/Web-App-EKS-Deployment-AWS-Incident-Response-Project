@@ -6,57 +6,37 @@ on:
       - main
 
 jobs:
-  # 1️⃣ Lint job
-  lint:
-    uses: ./.github/workflows/templates/lint.yml
-
-  # 2️⃣ Terraform plan
-  plan:
-    needs: lint
-    uses: ./.github/workflows/templates/init_plan.yml
-    with:
-      backend_file: terraform/environments/prod/backend.tfvars
-      tfvars_file: terraform/environments/prod/prod.tfvars
-
-  # 3️⃣ Terraform apply (manual approval required)
-  approve_apply:
-    needs: plan
+  apply:
     runs-on: ubuntu-latest
-    environment: production   # ← triggers manual approval via GitHub environment
+    environment: production
     steps:
-      - name: Checkout Code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # Assume IAM role via OIDC
+      # Configure AWS credentials via OIDC
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsRole
           aws-region: eu-west-2
 
-      # Optional: fetch AWS account ID dynamically
-      - name: Get AWS Account ID
-        id: get_account
+      # Fetch KMS Key from AWS Secrets Manager
+      - name: Get KMS Key from Secrets Manager
+        id: get_kms
         run: |
-          echo "AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
+          kms_key=$(aws secretsmanager get-secret-value \
+            --secret-id prod/kms-key \
+            --query SecretString \
+            --output text | jq -r '.KMS_KEY_ID')
+          echo "KMS_KEY=$kms_key" >> $GITHUB_ENV
 
-      # Apply Terraform plan
-      - name: Apply Terraform Plan
-        working-directory: terraform/environments/prod
-        run: terraform apply tfplan
-
-      # Generate kubeconfig
-      - name: Generate kubeconfig
-        working-directory: terraform/modules/eks
-        run: |
-          export KUBECONFIG=kubeconfig_my-cluster.yaml
-          kubectl get nodes
-
-      # Upload kubeconfig to S3 with KMS encryption
-      - name: Upload kubeconfig to S3
-        working-directory: terraform/modules/eks
-        run: |
-          aws s3 cp kubeconfig_my-cluster.yaml \
-            s3://my-ci-cd-artifacts/prod/kubeconfig.yaml \
-            --sse aws:kms \
-            --sse-kms-key-id arn:aws:kms:eu-west-2:${{ env.AWS_ACCOUNT_ID }}:key/${{ secrets.KMS_KEY_ID }}
+      # Run reusable apply workflow
+      - name: Apply Terraform
+        uses: ./.github/workflows/apply.yml
+        with:
+          backend_file: environments/prod/backend.tfvars
+          tfvars_file: environments/prod/prod.tfvars
+          environment_name: production
+          cluster_name: my-cluster
+          s3_bucket: my-ci-cd-artifacts
+          kms_key_id: ${{ env.KMS_KEY }}
