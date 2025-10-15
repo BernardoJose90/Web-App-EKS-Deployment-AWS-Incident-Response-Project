@@ -32,22 +32,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials via OIDC
-      - name: "Configure AWS credentials using OIDC"
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
-          aws-region: "eu-west-2"
-          role-session-name: "github-actions"
-          audience: "sts.amazonaws.com"
-
-      # 3️⃣ Debug: Verify AWS credentials
-      - name: "Debug: Verify AWS credentials"
-        run: |
-          echo "Testing AWS credentials..."
-          aws sts get-caller-identity || echo "❌ Failed to assume role!"
-
-      # 4️⃣ Debug: Print input variables
+      # 2️⃣ Debug: Print input variables
       - name: "Print inputs"
         run: |
           echo "backend_file=${{ inputs.backend_file }}"
@@ -57,28 +42,28 @@ jobs:
           echo "s3_bucket=${{ inputs.s3_bucket }}"
           echo "kms_key_id=${{ inputs.kms_key_id }}"
 
-      # 5️⃣ Fetch AWS Account ID
+      # 3️⃣ Fetch AWS Account ID
       - name: "Get AWS Account ID"
         id: get_account
         run: |
           AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
           echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
 
-      # 6️⃣ Terraform init
+      # 4️⃣ Terraform init
       - name: "Terraform Init"
         run: terraform init -backend-config="${{ inputs.backend_file }}"
 
-      # 7️⃣ Terraform apply
+      # 5️⃣ Terraform apply
       - name: "Terraform Apply"
         run: terraform apply -var-file="${{ inputs.tfvars_file }}" -auto-approve tfplan
 
-      # 8️⃣ Generate kubeconfig
+      # 6️⃣ Generate kubeconfig
       - name: "Generate kubeconfig"
         run: |
           export KUBECONFIG="terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml"
           kubectl get nodes || echo "kubectl check failed!"
 
-      # 9️⃣ Upload kubeconfig to S3 with KMS encryption
+      # 7️⃣ Upload kubeconfig to S3 with KMS encryption
       - name: "Upload kubeconfig to S3"
         run: |
         

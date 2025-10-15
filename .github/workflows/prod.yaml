@@ -27,19 +27,9 @@ jobs:
           echo "GITHUB_SHA=$GITHUB_SHA"
           echo "GITHUB_WORKFLOW=$GITHUB_WORKFLOW"
 
-      # 3️⃣ Debug: Print OIDC token info
-      - name: "Debug: OIDC token info"
-        run: |
-          echo "ACTIONS_ID_TOKEN_REQUEST_URL=$ACTIONS_ID_TOKEN_REQUEST_URL"
-          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
-          if [ -z "$ACTIONS_ID_TOKEN_REQUEST_TOKEN" ]; then
-            echo "⚠️ ACTIONS_ID_TOKEN_REQUEST_TOKEN is empty!"
-          else
-            echo "✅ Token exists."
-          fi
-
-      # 4️⃣ Configure AWS credentials via OIDC
+      # 3️⃣ Configure AWS credentials via OIDC
       - name: "Configure AWS credentials using OIDC"
+        id: aws_creds
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
@@ -47,19 +37,19 @@ jobs:
           role-session-name: "github-actions"
           audience: "sts.amazonaws.com"
 
-      # 5️⃣ Debug: Verify AWS credentials
+      # 4️⃣ Debug: Verify AWS credentials
       - name: "Debug: Verify AWS credentials"
         run: |
           echo "Testing AWS credentials..."
-          aws sts get-caller-identity || echo "❌ Failed to assume role!"
+          aws sts get-caller-identity
 
-      # 6️⃣ Install jq (for Secrets Manager)
+      # 5️⃣ Install jq for Secrets Manager
       - name: "Install jq"
         run: |
           sudo apt-get update
           sudo apt-get install -y jq
 
-      # 7️⃣ Fetch KMS Key from Secrets Manager
+      # 6️⃣ Fetch KMS Key from Secrets Manager
       - name: "Get KMS Key from Secrets Manager"
         id: get_kms
         run: |
@@ -70,7 +60,7 @@ jobs:
           echo "KMS_KEY=$kms_key" >> $GITHUB_ENV
           echo "Fetched KMS key: $kms_key"
 
-      # 8️⃣ Call reusable Terraform apply workflow..
+      # 7️⃣ Call reusable Terraform apply workflow
       - name: "Apply Terraform"
         uses: ./.github/workflows/apply.yml
         with:
