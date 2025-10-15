@@ -44,7 +44,7 @@ jobs:
           kms_key_id=$(echo "$kms_key_arn" | cut -d'/' -f2)
           echo "KMS_KEY_ID=$kms_key_id" >> $GITHUB_ENV
 
-      # 5️⃣ Setup Terraform
+      # 5️⃣ Setup Terraform.
       - name: "Setup Terraform"
         uses: hashicorp/setup-terraform@v2
         with:
