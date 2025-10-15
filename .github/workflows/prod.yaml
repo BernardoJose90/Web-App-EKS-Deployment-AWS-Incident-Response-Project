@@ -72,7 +72,7 @@ jobs:
         working-directory: environments/prod
         run: terraform apply -auto-approve tfplan
 
-      # 7️⃣ Debug: List created resources.
+      # 7️⃣ Debug: List created resources..
       - name: "Debug: List Terraform resources"
         working-directory: environments/prod
         run: |
