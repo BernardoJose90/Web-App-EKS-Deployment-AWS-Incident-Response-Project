@@ -39,6 +39,7 @@ jobs:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
           aws-region: "eu-west-2"
           role-session-name: "github-actions"
+          audience: "sts.amazonaws.com"
 
       # 3️⃣ Debug: Verify AWS credentials
       - name: "Debug: Verify AWS credentials"
@@ -46,8 +47,8 @@ jobs:
           echo "Testing AWS credentials..."
           aws sts get-caller-identity || echo "❌ Failed to assume role!"
 
-      # 4️⃣ Print workflow inputs
-      - name: "Debug: Print inputs"
+      # 4️⃣ Debug: Print input variables
+      - name: "Print inputs"
         run: |
           echo "backend_file=${{ inputs.backend_file }}"
           echo "tfvars_file=${{ inputs.tfvars_file }}"
@@ -56,7 +57,7 @@ jobs:
           echo "s3_bucket=${{ inputs.s3_bucket }}"
           echo "kms_key_id=${{ inputs.kms_key_id }}"
 
-      # 5️⃣ Fetch AWS account ID
+      # 5️⃣ Fetch AWS Account ID
       - name: "Get AWS Account ID"
         id: get_account
         run: |
@@ -80,7 +81,7 @@ jobs:
       # 9️⃣ Upload kubeconfig to S3 with KMS encryption
       - name: "Upload kubeconfig to S3"
         run: |
-          echo "Uploading kubeconfig using KMS key: ${{ inputs.kms_key_id }}"
+        
           aws s3 cp "terraform/modules/eks/kubeconfig_${{ inputs.cluster_name }}.yaml" \
             "s3://${{ inputs.s3_bucket }}/${{ inputs.environment_name }}/kubeconfig.yaml" \
             --sse aws:kms \

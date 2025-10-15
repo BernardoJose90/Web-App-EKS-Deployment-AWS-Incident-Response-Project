@@ -9,8 +9,7 @@ terraform {
 
 data "aws_caller_identity" "current" {}
 
-
-
+# 1️⃣ Create OIDC role for GitHub Actions
 resource "aws_iam_role" "github_actions_role" {
   name = "GitHubActionsRole"
 
@@ -25,15 +24,19 @@ resource "aws_iam_role" "github_actions_role" {
         Action = "sts:AssumeRoleWithWebIdentity"
         Condition = {
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/${var.github_branch}"
+            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:ref:refs/heads/*"
+          }
+          StringEquals = {
+            "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
         }
       }
     ]
   })
-
+  
 }
 
+# 2️⃣ Create least-privilege policy for GitHub Actions
 resource "aws_iam_policy" "github_actions_policy" {
   name        = "GitHubActionsPolicy"
   description = "Least privilege for Terraform + EKS CI workflow"
@@ -98,7 +101,7 @@ resource "aws_iam_policy" "github_actions_policy" {
   })
 }
 
-
+# 3️⃣ Attach policy to role
 resource "aws_iam_role_policy_attachment" "attach_github_policy" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_actions_policy.arn
