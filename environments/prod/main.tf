@@ -16,6 +16,7 @@ module "vpc_london" {
   eks_private_subnets = var.eks_private_subnets_london
   azs                 = var.azs_london
   tags                = var.tags
+  region              = "eu-west-2"
 }
 
 output "vpc_id" {
@@ -26,5 +27,17 @@ output "vpc_id" {
 output "public_subnets" {
   value       = module.vpc_london.public_subnets
   description = "Public subnet IDs"
+}
+
+output "eks_private_subnets" {
+  value       = module.vpc_london.eks_private_subnets
+  description = "EKS Private subnet IDs"
+
+}
+
+output "eks_public_subnets" {
+  value       = module.vpc_london.eks_public_subnets
+  description = "EKS Public subnet IDs"
+
 }
 
