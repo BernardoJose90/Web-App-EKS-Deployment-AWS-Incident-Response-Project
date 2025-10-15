@@ -2,6 +2,8 @@ terraform {
   backend "s3" {}
 }
 
+data "aws_caller_identity" "current" {}
+
 
 # Deploy London VPC with public/private subnets and EKS-specific subnets
 module "vpc_london" {
@@ -37,9 +39,47 @@ module "github_oidc_role" {
   github_org     = var.github_org
   github_branch  = var.github_branch
   github_repo    = var.github_repo
-  kms_key_id     = aws_kms_key.ci_cd.key_id
+  kms_key_id     = module.kms.kms_key_id 
 }
 
+
+module "eks_cluster" {
+  source    = "../../modules/compute/eks"
+  providers = { aws = aws.london }
+
+  cluster_name          = var.cluster_name
+  cluster_version       = var.cluster_version
+  vpc_id                = module.vpc_london.vpc_id
+  private_subnet_ids    = module.vpc_london.eks_private_subnets
+  public_subnet_ids     = module.vpc_london.eks_public_subnets
+  node_instance_type    = var.node_instance_type
+  node_desired_capacity = var.node_desired_capacity
+  node_min_size         = var.node_min_size
+  node_max_size         = var.node_max_size
+  tags                  = var.tags
+}
+
+output "vpc_id" {
+  value       = module.vpc_london.vpc_id
+  description = "VPC ID for the London environment"
+}
+
+output "public_subnets" {
+  value       = module.vpc_london.public_subnets
+  description = "Public subnet IDs"
+}
+
+output "eks_private_subnets" {
+  value       = module.vpc_london.eks_private_subnets
+  description = "EKS Private subnet IDs"
+
+}
+
+output "eks_public_subnets" {
+  value       = module.vpc_london.eks_public_subnets
+  description = "EKS Public subnet IDs"
+
+}
 
 output "vpc_id" {
   value       = module.vpc_london.vpc_id

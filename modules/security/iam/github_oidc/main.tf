@@ -125,6 +125,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Effect = "Allow"
         Action = [
           "s3:PutObject",
+          "s3:GetObject",
           "s3:DeleteObject"
         ]
         Resource = [
@@ -136,6 +137,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Effect = "Allow"
         Action = [
           "s3:PutObject",
+          "s3:GetObject",
           "s3:PutObjectAcl",
           "s3:DeleteObject",
           "s3:DeleteObjectVersion"
