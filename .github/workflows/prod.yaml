@@ -5,6 +5,10 @@ on:
     branches:
       - "main"
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -47,7 +51,7 @@ jobs:
       # 5️⃣ Debug: Verify AWS credentials
       - name: "Debug: Verify AWS credentials"
         run: |
-        
+
           echo "Testing AWS credentials..."
           aws sts get-caller-identity || echo "❌ Failed to assume role!"
 
