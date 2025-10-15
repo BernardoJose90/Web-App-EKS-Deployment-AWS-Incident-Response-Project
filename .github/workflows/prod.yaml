@@ -23,7 +23,23 @@ jobs:
           aws-region: eu-west-2
           role-session-name: github-actions
 
-      # 3️⃣ Install jq (needed for parsing JSON)
+      # 2a️⃣ Debug: Check OIDC token
+      - name: Print OIDC environment variables
+        run: |
+          echo "GITHUB_REPOSITORY=$GITHUB_REPOSITORY"
+          echo "GITHUB_REF=$GITHUB_REF"
+          echo "GITHUB_SHA=$GITHUB_SHA"
+          echo "ACTIONS_ID_TOKEN_REQUEST_TOKEN=$ACTIONS_ID_TOKEN_REQUEST_TOKEN"
+          echo "ACTIONS_ID_TOKEN_REQUEST_URL=$ACTIONS_ID_TOKEN_REQUEST_URL"
+
+      # 2b️⃣ Debug: Verify AWS credentials (STS call)
+      - name: Verify AWS credentials
+        run: |
+          set -e
+          echo "Testing AWS credentials..."
+          aws sts get-caller-identity || echo "Failed to assume role!"
+
+      # 3️⃣ Install jq
       - name: Install jq
         run: sudo apt-get update && sudo apt-get install -y jq
 
