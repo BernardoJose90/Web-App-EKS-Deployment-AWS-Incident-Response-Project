@@ -30,7 +30,7 @@ resource "aws_iam_role" "github_actions_role" {
       }
     ]
   })
-    lifecycle {
+  lifecycle {
     prevent_destroy = true   # prevents accidental 'terraform destroy'
     ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
   }
@@ -45,8 +45,8 @@ resource "aws_iam_policy" "github_actions_policy" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "ec2:DescribeVpcs",
           "ec2:DescribeSubnets",
           "ec2:DescribeRouteTables",
@@ -64,8 +64,8 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "eks:CreateCluster",
           "eks:DescribeCluster",
           "eks:DeleteCluster",
@@ -74,8 +74,8 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "s3:GetObject",
           "s3:PutObject",
           "s3:PutObjectAcl"
@@ -83,8 +83,8 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "arn:aws:s3:::my-ci-cd-artifacts/prod/*"
       },
       {
-        Effect   = "Allow"
-        Action   = [
+        Effect = "Allow"
+        Action = [
           "kms:Encrypt",
           "kms:GenerateDataKey"
         ]
@@ -92,7 +92,7 @@ resource "aws_iam_policy" "github_actions_policy" {
       }
     ]
   })
-    lifecycle {
+  lifecycle {
     prevent_destroy = true   # prevents accidental 'terraform destroy'
     ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
   }
