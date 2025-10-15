@@ -24,9 +24,7 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Sensitive variable definition files (e.g., access keys, secrets)
-*.tfvars
-*.tfvars.json
+
 
 # Local backend configs — often contain remote backend credentials
 backend.tfvars
