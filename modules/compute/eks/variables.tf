@@ -1,57 +1,67 @@
 variable "cluster_name" {
-  description = "The name of the EKS cluster"
+  description = "Name of the EKS cluster"
   type        = string
 }
 
-
-
-variable "vpc_id" {
-  description = "VPC ID where the EKS cluster will be deployed"
+variable "cluster_role_arn" {
+  description = "ARN of the IAM role for the EKS cluster"
   type        = string
 }
 
-variable "private_subnet_ids" {
-  description = "List of private subnet IDs for worker nodes"
+variable "kubernetes_version" {
+  description = "Kubernetes version"
+  type        = string
+}
+
+variable "subnet_ids" {
+  description = "List of subnet IDs for the EKS cluster"
   type        = list(string)
 }
 
-variable "public_subnet_ids" {
-  description = "List of public subnet IDs for ALB and load balancers"
+variable "endpoint_public_access" {
+  description = "Whether the Kubernetes API server endpoint is publicly accessible"
+  type        = bool
+  default     = true
+}
+
+variable "endpoint_private_access" {
+  description = "Whether the Kubernetes API server endpoint is privately accessible"
+  type        = bool
+  default     = false
+}
+
+variable "public_access_cidrs" {
+  description = "List of CIDR blocks that can access the public API server endpoint"
   type        = list(string)
 }
 
-variable "cluster_version" {
-  description = "EKS cluster Kubernetes version"
+variable "service_ipv4_cidr" {
+  description = "The CIDR block to assign Kubernetes service IP addresses from"
   type        = string
-  default     = "1.34"
 }
 
-variable "node_instance_type" {
-  description = "EC2 instance type for worker nodes"
-  type        = string
-  default     = "t3.medium"
+variable "enabled_cluster_log_types" {
+  description = "List of log types to enable for the EKS cluster"
+  type        = list(string)
 }
 
-variable "node_desired_capacity" {
-  description = "Desired number of worker nodes"
-  type        = number
-  default     = 2
-}
-
-variable "node_min_size" {
-  description = "Minimum number of worker nodes"
-  type        = number
-  default     = 2
-}
-
-variable "node_max_size" {
-  description = "Maximum number of worker nodes"
-  type        = number
-  default     = 4
+variable "node_groups" {
+  description = "Map of node group configurations"
+  type = map(object({
+    node_role_arn      = string
+    subnet_ids         = list(string)
+    capacity_type      = string
+    instance_types     = list(string)
+    desired_size       = number
+    max_size           = number
+    min_size           = number
+    update_max_unavailable = number
+  }))
+  default = {}
 }
 
 variable "tags" {
-  description = "Additional tags for resources"
+  description = "Tags to apply to all resources"
   type        = map(string)
   default     = {}
 }

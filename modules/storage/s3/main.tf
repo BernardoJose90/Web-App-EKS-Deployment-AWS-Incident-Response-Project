@@ -24,7 +24,7 @@ resource "aws_s3_bucket" "artifacts" {
     ManagedBy   = "Terraform"
   }
   lifecycle {
-    prevent_destroy = true   # prevents accidental 'terraform destroy'
+    prevent_destroy = true # prevents accidental 'terraform destroy'
     ignore_changes  = [tags] # ignore tag drift, useful when tags are managed elsewhere
   }
 }

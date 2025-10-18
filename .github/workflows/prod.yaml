@@ -9,6 +9,9 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  AWS_REGION: eu-west-2   # 👈 Change this once to switch region (London/Ireland)
+
 jobs:
   apply:
     runs-on: ubuntu-latest
@@ -24,7 +27,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
-          aws-region: "eu-west-2"
+          aws-region: ${{ env.AWS_REGION }}
           role-session-name: "github-actions-${{ github.sha }}"
           audience: "sts.amazonaws.com"
 
@@ -50,23 +53,24 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
-      # 6️⃣ Terraform Init with production backend config.
+      # 6️⃣ Terraform Init with dynamic backend config.
       - name: "Terraform Init"
         working-directory: environments/prod
         run: |
           echo "Current directory: $(pwd)"
           echo "Terraform files:"
           ls -la *.tf
+          echo "Initializing backend for region: ${AWS_REGION}"
           terraform init \
             -backend-config="bucket=cloudsec-project-tfstate" \
             -backend-config="key=prod/terraform.tfstate" \
-            -backend-config="region=eu-west-2"
+            -backend-config="region=${AWS_REGION}"
 
       - name: "Terraform Plan"
         working-directory: environments/prod
         run: |
           echo "Running Terraform plan from: $(pwd)"
-          terraform plan -var-file="prod.tfvars" -out=tfplan
+          terraform plan -var-file="prod.tfvars" -out=tfplan -var="region=${AWS_REGION}"
 
       - name: "Terraform Apply"
         working-directory: environments/prod
@@ -80,4 +84,6 @@ jobs:
           terraform state list || echo "No resources in state yet"
           
           echo "=== AWS EKS Clusters ==="
-          aws eks list-clusters --region eu-west-2 || echo "EKS command failed - may not have clusters yet"
+          aws eks list-clusters --region ${AWS_REGION} || echo "EKS command failed - may not have clusters yet"
+          echo "=== AWS S3 Buckets ==="
+          aws s3 ls || echo "S3 command failed - may not have buckets yet"

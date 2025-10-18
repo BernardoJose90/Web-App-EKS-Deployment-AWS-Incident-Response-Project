@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.16"
+      version = "~> 6.0"
     }
   }
 }
@@ -27,15 +27,11 @@ data "aws_route_tables" "main_for_vpc" {
   }
 }
 
-
 resource "aws_ec2_tag" "default_rt_name" {
   resource_id = data.aws_route_tables.main_for_vpc.ids[0]
   key         = "Name"
   value       = "${var.vpc_name}-default-rt"
 }
-
-
-
 
 # Public Subnets
 resource "aws_subnet" "public" {
@@ -66,30 +62,40 @@ resource "aws_subnet" "private" {
   )
 }
 
-# Eks_Public Subnets
+# EKS Public Subnets (REMOVED DUPLICATE - KEEP THIS VERSION)
 resource "aws_subnet" "eks_public" {
-  count             = length(var.eks_public_subnets)
-  vpc_id            = aws_vpc.main.id
-  cidr_block        = var.eks_public_subnets[count.index]
-  availability_zone = var.azs[count.index]
+  count                   = length(var.eks_public_subnets)
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.eks_public_subnets[count.index]
+  availability_zone       = var.azs[count.index]
+  map_public_ip_on_launch = true  # Important for public subnets
+  
   tags = merge(
     var.tags,
     {
       Name = "${var.tags["Environment"]}-${var.region}-${var.vpc_name}-eks_public-${var.azs[count.index]}"
+      # Kubernetes tags for AWS Load Balancer Controller auto-discovery
+      "kubernetes.io/role/elb"                    = "1"
+      "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     }
   )
 }
 
-# Eks_Private Subnets
+# EKS Private Subnets (REMOVED DUPLICATE - KEEP THIS VERSION)  
 resource "aws_subnet" "eks_private" {
   count             = length(var.eks_private_subnets)
   vpc_id            = aws_vpc.main.id
   cidr_block        = var.eks_private_subnets[count.index]
   availability_zone = var.azs[count.index]
+  map_public_ip_on_launch = false  # Important for private subnets
+  
   tags = merge(
     var.tags,
     {
       Name = "${var.tags["Environment"]}-${var.region}-${var.vpc_name}-eks_private-${var.azs[count.index]}"
+      # Kubernetes tags for AWS Load Balancer Controller auto-discovery
+      "kubernetes.io/role/internal-elb"           = "1"
+      "kubernetes.io/cluster/${var.cluster_name}" = "shared"
     }
   )
 }
@@ -121,6 +127,28 @@ resource "aws_route_table" "eks_private" {
   })
 }
 
+# NAT Gateway for private subnets
+resource "aws_eip" "nat" {
+  domain = "vpc"
+  tags   = merge(var.tags, { Name = "${var.vpc_name}-nat-eip" })
+}
+
+resource "aws_nat_gateway" "nat" {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[0].id  # Place in first public subnet
+
+  tags = merge(var.tags, { Name = "${var.vpc_name}-nat-gw" })
+
+  depends_on = [aws_internet_gateway.igw]
+}
+
+# Add NAT route to EKS private route table
+resource "aws_route" "eks_private_nat" {
+  route_table_id         = aws_route_table.eks_private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.nat.id
+}
+
 # Associate Public Subnets with Route Table
 resource "aws_route_table_association" "public_assoc" {
   count          = length(var.public_subnets)
@@ -128,7 +156,7 @@ resource "aws_route_table_association" "public_assoc" {
   route_table_id = aws_route_table.public.id
 }
 
-# Associate eksprivate Subnets with Route Table
+# Associate EKS Private Subnets with Route Table
 resource "aws_route_table_association" "eks_private_assoc" {
   count          = length(var.eks_private_subnets)
   subnet_id      = aws_subnet.eks_private[count.index].id

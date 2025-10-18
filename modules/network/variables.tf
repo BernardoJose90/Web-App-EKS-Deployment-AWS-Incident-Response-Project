@@ -39,3 +39,9 @@ variable "region" {
   description = "AWS region for naming subnets"
   type        = string
 }
+
+variable "cluster_name" {
+  description = "Name of the EKS cluster for Kubernetes tagging"
+  type        = string
+  default     = ""
+}

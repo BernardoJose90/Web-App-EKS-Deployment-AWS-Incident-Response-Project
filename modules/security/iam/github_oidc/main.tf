@@ -2,7 +2,7 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 6.16"
+      version = "~> 6.0"
     }
   }
 }
@@ -48,7 +48,6 @@ resource "aws_iam_role" "github_actions_role" {
   })
 }
 
-# 3️⃣ Create least-privilege policy for GitHub Actions
 resource "aws_iam_policy" "github_actions_policy" {
   name        = "GitHubActionsPolicy-Production"
   description = "Complete least privilege policy for GitHub Actions Terraform deployment"
@@ -88,6 +87,22 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
+      # ========== SECURITY GROUP MANAGEMENT ==========
+      {
+        Sid = "SecurityGroupManagement"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:DescribeSecurityGroups"
+        ]
+        Resource = "*"
+      },
+
       # ========== EKS CLUSTER MANAGEMENT ==========
       {
         Sid = "EKSClusterManagement"
@@ -103,29 +118,98 @@ resource "aws_iam_policy" "github_actions_policy" {
           "eks:DeleteNodegroup",
           "eks:DescribeNodegroup",
           "eks:ListNodegroups",
-          "eks:UpdateNodegroupConfig"
+          "eks:UpdateNodegroupConfig",
+          "eks:TagResource",
+          "eks:UntagResource"
         ]
         Resource = "*"
       },
 
-      # ========== S3 COMPLETE READ ACCESS ==========
+      # ========== EKS ADDON MANAGEMENT ==========
       {
-        Sid = "S3ReadAll"
+        Sid = "EKSAddonManagement"
         Effect = "Allow"
         Action = [
-          "s3:Get*",
-          "s3:List*"
+          "eks:CreateAddon",
+          "eks:DescribeAddon",
+          "eks:DeleteAddon",
+          "eks:ListAddons",
+          "eks:UpdateAddon"
         ]
         Resource = "*"
       },
 
-      # ========== S3 WRITE ACCESS (LEAST PRIVILEGE) ==========
+      # ========== EKS IAM ROLE MANAGEMENT ==========
+      {
+        Sid = "EKSRoleManagement",
+        Effect = "Allow"
+        Action = [
+          "iam:CreateServiceLinkedRole",
+          "iam:GetServiceLinkedRoleDeletionStatus"
+        ]
+        Resource = "arn:aws:iam::*:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS*"
+      },
+
+      # ========== LOAD BALANCER MANAGEMENT ==========
+      {
+        Sid = "LoadBalancerManagement"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateLoadBalancer",
+          "elasticloadbalancing:DeleteLoadBalancer",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:CreateTargetGroup",
+          "elasticloadbalancing:DeleteTargetGroup",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:ModifyLoadBalancerAttributes",
+          "elasticloadbalancing:ModifyTargetGroupAttributes"
+        ]
+        Resource = "*"
+      },
+
+      # ========== AUTOSCALING & LAUNCH TEMPLATES ==========
+      {
+        Sid = "AutoScalingManagement"
+        Effect = "Allow"
+        Action = [
+          "autoscaling:Describe*",
+          "autoscaling:CreateAutoScalingGroup",
+          "autoscaling:DeleteAutoScalingGroup",
+          "autoscaling:UpdateAutoScalingGroup",
+          "autoscaling:CreateLaunchConfiguration",
+          "autoscaling:DeleteLaunchConfiguration",
+          "ec2:DescribeLaunchTemplates",
+          "ec2:CreateLaunchTemplate",
+          "ec2:DeleteLaunchTemplate",
+          "ec2:ModifyLaunchTemplate",
+          "ec2:CreateLaunchTemplateVersion",
+          "ec2:DeleteLaunchTemplateVersion"
+        ]
+        Resource = "*"
+      },
+
+      # ========== S3 SPECIFIC ACCESS (LEAST PRIVILEGE) ==========
+      {
+        Sid = "S3ListBuckets"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+          "s3:GetBucketLocation"
+        ]
+        Resource = [
+          "arn:aws:s3:::cloudsec-project-tfstate",
+          "arn:aws:s3:::my-ci-cd-artifacts-*"
+        ]
+      },
       {
         Sid = "S3TerraformState"
         Effect = "Allow"
         Action = [
-          "s3:PutObject",
           "s3:GetObject",
+          "s3:PutObject",
           "s3:DeleteObject"
         ]
         Resource = [
@@ -136,11 +220,9 @@ resource "aws_iam_policy" "github_actions_policy" {
         Sid = "S3ArtifactsWrite"
         Effect = "Allow"
         Action = [
-          "s3:PutObject",
           "s3:GetObject",
-          "s3:PutObjectAcl",
-          "s3:DeleteObject",
-          "s3:DeleteObjectVersion"
+          "s3:PutObject",
+          "s3:DeleteObject"
         ]
         Resource = [
           "arn:aws:s3:::my-ci-cd-artifacts-*/*"
@@ -153,15 +235,7 @@ resource "aws_iam_policy" "github_actions_policy" {
           "s3:PutBucketVersioning",
           "s3:PutBucketEncryption",
           "s3:PutBucketPublicAccessBlock",
-          "s3:PutBucketPolicy",
-          "s3:PutBucketCors",
-          "s3:PutBucketWebsite",
-          "s3:PutAccelerateConfiguration",
-          "s3:PutBucketRequestPayment",
-          "s3:PutBucketLogging",
-          "s3:PutBucketLifecycleConfiguration",
-          "s3:PutBucketNotification",
-          "s3:PutBucketReplication"
+          "s3:PutBucketPolicy"
         ]
         Resource = [
           "arn:aws:s3:::my-ci-cd-artifacts-*",
@@ -169,12 +243,23 @@ resource "aws_iam_policy" "github_actions_policy" {
         ]
       },
 
-      # ========== KMS KEY MANAGEMENT ==========
+      # ========== KMS LIMITED ACCESS ==========
       {
-        Sid = "KMSFullAccess"
+        Sid = "KMSLimitedAccess"
         Effect = "Allow"
         Action = [
-          "kms:*"
+          "kms:CreateKey",
+          "kms:DescribeKey",
+          "kms:ScheduleKeyDeletion",
+          "kms:CreateAlias",
+          "kms:DeleteAlias",
+          "kms:EnableKey",
+          "kms:DisableKey",
+          "kms:Encrypt",
+          "kms:Decrypt",
+          "kms:GenerateDataKey",
+          "kms:ListAliases",
+          "kms:ListKeys"
         ]
         Resource = "*"
       },
@@ -203,30 +288,66 @@ resource "aws_iam_policy" "github_actions_policy" {
           "iam:DeletePolicy",
           "iam:CreateOpenIDConnectProvider",
           "iam:DeleteOpenIDConnectProvider",
-          "iam:CreateServiceLinkedRole"
+          "iam:PassRole"
         ]
         Resource = [
           "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GitHubActionsRole",
           "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/GitHubActionsPolicy*",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*eks*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*nodegroup*",
+          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/prod-eks-cluster-*"
         ]
       },
 
-      # ========== AUTOSCALING & LAUNCH TEMPLATES ==========
+      # ========== CLOUDWATCH LOGS ==========
       {
-        Sid = "AutoScalingManagement"
+        Sid = "CloudWatchLogs"
         Effect = "Allow"
         Action = [
-          "autoscaling:Describe*",
-          "autoscaling:CreateAutoScalingGroup",
-          "autoscaling:DeleteAutoScalingGroup",
-          "autoscaling:UpdateAutoScalingGroup",
-          "ec2:DescribeLaunchTemplates",
-          "ec2:CreateLaunchTemplate",
-          "ec2:DeleteLaunchTemplate",
-          "ec2:ModifyLaunchTemplate"
+          "logs:CreateLogGroup",
+          "logs:DescribeLogGroups",
+          "logs:DeleteLogGroup",
+          "logs:PutRetentionPolicy",
+          "logs:DescribeLogStreams",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:log-group:/aws/eks/*"
+      },
+
+      # ========== ECR ACCESS ==========
+      {
+        Sid = "ECRAccess"
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:GetRepositoryPolicy",
+          "ecr:DescribeRepositories",
+          "ecr:ListImages",
+          "ecr:DescribeImages",
+          "ecr:BatchGetImage",
+          "ecr:InitiateLayerUpload",
+          "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload",
+          "ecr:PutImage"
         ]
         Resource = "*"
+      },
+
+      # ========== ROUTE53 ACCESS ==========
+      {
+        Sid = "Route53Access"
+        Effect = "Allow"
+        Action = [
+          "route53:ChangeResourceRecordSets",
+          "route53:ListResourceRecordSets",
+          "route53:GetHostedZone",
+          "route53:ListHostedZones"
+        ]
+        Resource = "arn:aws:route53:::hostedzone/*"
       },
 
       # ========== SECRETS MANAGER ==========
@@ -238,7 +359,8 @@ resource "aws_iam_policy" "github_actions_policy" {
           "secretsmanager:DescribeSecret",
           "secretsmanager:CreateSecret",
           "secretsmanager:DeleteSecret",
-          "secretsmanager:PutSecretValue"
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:TagResource"
         ]
         Resource = "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key*"
       },
