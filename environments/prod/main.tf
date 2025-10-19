@@ -58,6 +58,7 @@ module "eks_iam" {
   aws_region     = var.region_london
 }
 
+
 # EKS Cluster in London
 module "eks_cluster" {
   source       = "../../modules/compute/eks"
@@ -110,7 +111,7 @@ output "cluster_security_group_id" {
   value       = module.eks_cluster.cluster_security_group_id
 }
 
-# Network outputs for reference - FIXED: using correct module name
+# Network outputs for reference - FIXED: using correct module name.
 output "vpc_id" {
   description = "VPC ID"
   value       = module.vpc_london.vpc_id
