@@ -14,7 +14,7 @@ cluster_role_arn = "dummy-arn"
 subnet_ids = ["dummy-id"]
 
 # EKS Cluster Configuration.
-cluster_name = "prod-eks-cluster"
+cluster_name = "prod-eks-cluster" 
 kubernetes_version = "1.29"
 
 # Network settings
