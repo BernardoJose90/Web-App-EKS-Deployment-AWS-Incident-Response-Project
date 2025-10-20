@@ -106,6 +106,12 @@ variable "azs_london" {
   default     = ["eu-west-2a", "eu-west-2b"]
 }
 
+variable "azs_ireland" {
+  description = "Availability zones for ireland"
+  type        = list(string)
+  default     = ["eu-west-1a", "eu-west-1b"]
+}
+
 variable "tags" {
   description = "Tags for all resources"
   type        = map(string)
