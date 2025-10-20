@@ -31,7 +31,7 @@ module "kms" {
   aws_account_id = data.aws_caller_identity.current.account_id
 }
 
-# S3 Bucket for CI/CD artifacts
+# S3 Bucket for CI/CD artifacts..
 module "s3_bucket" {
   source      = "../../modules/storage/s3"
   providers   = { aws = aws.london }
