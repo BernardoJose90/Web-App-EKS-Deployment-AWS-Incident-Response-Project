@@ -1,7 +1,11 @@
+
+
 # VPC Configuration
 vpc_name = "prod-vpc"
 vpc_cidr_london = "10.20.0.0/16"  # ← ADD THIS
 azs_london = ["eu-west-2a", "eu-west-2b"]
+azs_ireland = ["eu-west-1a", "eu-west-1b"]
+
 
 # Subnet Configuration - ADD THESE 4 LINES
 public_subnets_london  = ["10.20.10.0/24", "10.20.20.0/24"]
