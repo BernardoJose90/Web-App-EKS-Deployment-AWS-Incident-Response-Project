@@ -134,6 +134,17 @@ resource "aws_iam_policy" "github_actions_full_policy" {
         ]
         Resource = "*"
       },
+      # 7️⃣ Secrets Manager access
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = [
+          "arn:aws:secretsmanager:eu-west-2:123456789012:secret:prod/kms-key-*"
+        ]
+      },
 
       # Optional CloudWatch logs for monitoring
       {
