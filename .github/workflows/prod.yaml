@@ -28,5 +28,5 @@ jobs:
       environment_name: ${{ github.event.inputs.environment_name }}
       cluster_name: ${{ github.event.inputs.cluster_name }}
       tfvars_file: "environments/prod/prod.tfvars"
-      s3_bucket: "my-ci-cd-artifacts"
+      s3_bucket: "cloudsec-project-tfstate"
       kms_secret_name: "prod/kms-key"
