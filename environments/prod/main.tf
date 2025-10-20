@@ -18,7 +18,7 @@ module "vpc_london" {
   eks_private_subnets = var.eks_private_subnets_london
   azs                 = var.azs_london
   tags                = var.tags
-  region              = var.region_london # London region
+  region              = var.region 
   cluster_name        = var.cluster_name  # Add this for Kubernetes subnet tagging..
 }
 

@@ -3,13 +3,13 @@
 # London region provider
 provider "aws" {
   alias  = "london"
-  region = var.region_london
+  region = var.region
 }
 
 # Ireland region provider (if needed).
 provider "aws" {
   alias  = "ireland"
-  region = var.region_ireland
+  region = var.region
 }
 
 
