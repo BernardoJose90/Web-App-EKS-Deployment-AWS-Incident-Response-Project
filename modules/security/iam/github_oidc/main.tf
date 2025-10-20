@@ -200,7 +200,9 @@ resource "aws_iam_policy" "github_actions_policy" {
         Effect = "Allow"
         Action = [
           "s3:ListBucket",
-          "s3:GetBucketLocation"
+          "s3:GetBucketPolicy",
+          "s3:GetBucketLocation",
+          "s3:GetBucketAcl"
         ]
         Resource = [
           "arn:aws:s3:::cloudsec-project-tfstate",
@@ -262,7 +264,9 @@ resource "aws_iam_policy" "github_actions_policy" {
           "kms:Decrypt",
           "kms:GenerateDataKey",
           "kms:ListAliases",
-          "kms:ListKeys"
+          "kms:ListKeys",
+          "kms:GetKeyPolicy",
+          "kms:GetKeyRotationStatus"
         ]
         Resource = "*"
       },
