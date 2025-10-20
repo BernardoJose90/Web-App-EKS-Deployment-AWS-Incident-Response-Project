@@ -22,7 +22,7 @@ module "vpc_london" {
   cluster_name        = var.cluster_name  # Add this for Kubernetes subnet tagging..
 }
 
-# KMS Key for encrypting S3 bucket and GitHub OIDC role
+# KMS Key for encrypting S3 bucket and GitHub OIDC role.
 module "kms" {
   source         = "../../modules/security/kms"
   providers      = { aws = aws.london }
@@ -48,7 +48,7 @@ module "github_oidc_role" {
   github_repo    = var.github_repo
   kms_key_id     = module.kms.kms_key_id
 }
-
+/*
 # IAM roles for EKS - ADD THIS MISSING MODULE
 module "eks_iam" {
   source         = "../../modules/security/iam/eks"
