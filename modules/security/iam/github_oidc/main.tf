@@ -22,7 +22,7 @@ resource "aws_iam_openid_connect_provider" "github" {
   ]
 }
 
-# 2️⃣ Create OIDC role for GitHub Actions
+# 2️⃣ Create OIDC Role for GitHub Actions
 resource "aws_iam_role" "github_actions_role" {
   name = "GitHubActionsRole"
 
@@ -51,14 +51,15 @@ resource "aws_iam_role" "github_actions_role" {
   }
 }
 
+# 3️⃣ Create the comprehensive IAM policy
 resource "aws_iam_policy" "github_actions_policy" {
   name        = "GitHubActionsPolicy-Production"
-  description = "Complete least privilege policy for GitHub Actions Terraform deployment"
+  description = "Full least-privilege policy for GitHub Actions Terraform deployments"
 
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
-      # ========== EC2 & NETWORKING ==========
+      # ===== EC2 & Networking =====
       {
         Sid = "EC2Networking"
         Effect = "Allow"
@@ -90,7 +91,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== SECURITY GROUP MANAGEMENT ==========
+      # ===== Security Group Management =====
       {
         Sid = "SecurityGroupManagement"
         Effect = "Allow"
@@ -106,7 +107,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== EKS CLUSTER MANAGEMENT ==========
+      # ===== EKS Cluster Management =====
       {
         Sid = "EKSClusterManagement"
         Effect = "Allow"
@@ -128,7 +129,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== EKS ADDON MANAGEMENT ==========
+      # ===== EKS Addon Management =====
       {
         Sid = "EKSAddonManagement"
         Effect = "Allow"
@@ -142,9 +143,9 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== EKS IAM ROLE MANAGEMENT ==========
+      # ===== EKS IAM Role Management =====
       {
-        Sid = "EKSRoleManagement",
+        Sid = "EKSRoleManagement"
         Effect = "Allow"
         Action = [
           "iam:CreateServiceLinkedRole",
@@ -153,7 +154,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "arn:aws:iam::*:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS*"
       },
 
-      # ========== LOAD BALANCER MANAGEMENT ==========
+      # ===== Load Balancer Management =====
       {
         Sid = "LoadBalancerManagement"
         Effect = "Allow"
@@ -173,7 +174,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== AUTOSCALING & LAUNCH TEMPLATES ==========
+      # ===== AutoScaling & Launch Templates =====
       {
         Sid = "AutoScalingManagement"
         Effect = "Allow"
@@ -194,15 +195,16 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== S3 SPECIFIC ACCESS (LEAST PRIVILEGE) ==========
+      # ===== S3 Access =====
       {
-        Sid = "S3ListBuckets"
+        Sid = "S3BucketRead"
         Effect = "Allow"
         Action = [
           "s3:ListBucket",
           "s3:GetBucketPolicy",
           "s3:GetBucketLocation",
-          "s3:GetBucketAcl"
+          "s3:GetBucketAcl",
+          "s3:GetBucketCORS"
         ]
         Resource = [
           "arn:aws:s3:::cloudsec-project-tfstate",
@@ -248,7 +250,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         ]
       },
 
-      # ========== KMS LIMITED ACCESS ==========
+      # ===== KMS Limited Access =====
       {
         Sid = "KMSLimitedAccess"
         Effect = "Allow"
@@ -266,12 +268,13 @@ resource "aws_iam_policy" "github_actions_policy" {
           "kms:ListAliases",
           "kms:ListKeys",
           "kms:GetKeyPolicy",
-          "kms:GetKeyRotationStatus"
+          "kms:GetKeyRotationStatus",
+          "kms:ListResourceTags"
         ]
         Resource = "*"
       },
 
-      # ========== IAM OIDC & ROLE MANAGEMENT ==========
+      # ===== IAM Access =====
       {
         Sid = "IAMReadOnly"
         Effect = "Allow"
@@ -307,7 +310,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         ]
       },
 
-      # ========== CLOUDWATCH LOGS ==========
+      # ===== CloudWatch Logs =====
       {
         Sid = "CloudWatchLogs"
         Effect = "Allow"
@@ -323,7 +326,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "arn:aws:logs:*:*:log-group:/aws/eks/*"
       },
 
-      # ========== ECR ACCESS ==========
+      # ===== ECR Access =====
       {
         Sid = "ECRAccess"
         Effect = "Allow"
@@ -344,7 +347,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "*"
       },
 
-      # ========== ROUTE53 ACCESS ==========
+      # ===== Route53 Access =====
       {
         Sid = "Route53Access"
         Effect = "Allow"
@@ -357,7 +360,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "arn:aws:route53:::hostedzone/*"
       },
 
-      # ========== SECRETS MANAGER ==========
+      # ===== Secrets Manager =====
       {
         Sid = "SecretsManagerAccess"
         Effect = "Allow"
@@ -372,7 +375,7 @@ resource "aws_iam_policy" "github_actions_policy" {
         Resource = "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key*"
       },
 
-      # ========== BASIC STS PERMISSIONS ==========
+      # ===== STS =====
       {
         Sid = "StsBasic"
         Effect = "Allow"
@@ -391,7 +394,6 @@ resource "aws_iam_role_policy_attachment" "attach_github_policy" {
   role       = aws_iam_role.github_actions_role.name
   policy_arn = aws_iam_policy.github_actions_policy.arn
 }
-
 
 output "github_actions_role_name" {
   description = "Name of the GitHub Actions IAM role"
