@@ -2,7 +2,7 @@ terraform {
   backend "s3" {}
 }
 
-# Get the current AWS caller identity for IAM context
+# Get the current AWS caller identity for IAM context..
 data "aws_caller_identity" "current" {}
 
 # Deploy London VPC with public/private subnets and EKS-specific subnets...
