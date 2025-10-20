@@ -204,7 +204,8 @@ resource "aws_iam_policy" "github_actions_policy" {
           "s3:GetBucketPolicy",
           "s3:GetBucketLocation",
           "s3:GetBucketAcl",
-          "s3:GetBucketCORS"
+          "s3:GetBucketCORS",
+          "s3:GetBucketWebsite"
         ]
         Resource = [
           "arn:aws:s3:::cloudsec-project-tfstate",
