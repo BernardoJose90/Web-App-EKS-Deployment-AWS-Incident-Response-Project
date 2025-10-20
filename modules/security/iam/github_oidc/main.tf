@@ -9,36 +9,31 @@ terraform {
 
 data "aws_caller_identity" "current" {}
 
-# 1️⃣ Create OIDC Provider for GitHub
+# 1️⃣ OIDC Provider for GitHub Actions
 resource "aws_iam_openid_connect_provider" "github" {
   url = "https://token.actions.githubusercontent.com"
 
-  client_id_list = [
-    "sts.amazonaws.com",
-  ]
-
-  thumbprint_list = [
-    "6938fd4d98bab03faadb97b34396831e3780aea1", # GitHub's OIDC thumbprint
-  ]
+  client_id_list = ["sts.amazonaws.com"]
+  thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
-# 2️⃣ Create OIDC Role for GitHub Actions
+# 2️⃣ GitHub Actions IAM Role
 resource "aws_iam_role" "github_actions_role" {
   name = "GitHubActionsRole"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Effect = "Allow"
+        Effect = "Allow",
         Principal = {
           Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com"
-        }
-        Action = "sts:AssumeRoleWithWebIdentity"
+        },
+        Action = "sts:AssumeRoleWithWebIdentity",
         Condition = {
           StringLike = {
             "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:*"
-          }
+          },
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
@@ -46,359 +41,47 @@ resource "aws_iam_role" "github_actions_role" {
       }
     ]
   })
+
   lifecycle {
     prevent_destroy = true
   }
 }
 
-# 3️⃣ Create the comprehensive IAM policy
-resource "aws_iam_policy" "github_actions_policy" {
-  name        = "GitHubActionsPolicy-Production"
-  description = "Full least-privilege policy for GitHub Actions Terraform deployments"
+# 3️⃣ Attach modular policies
+
+module "s3_policy" {
+  source = "./policies/s3"
+  role   = aws_iam_role.github_actions_role.name
+}
+
+module "eks_policy" {
+  source = "./policies/eks"
+  role   = aws_iam_role.github_actions_role.name
+}
+
+module "misc_policy" {
+  source = "./policies/misc"
+  role   = aws_iam_role.github_actions_role.name
+}
+
+# 4️⃣ Output Role Name
+output "github_actions_role_name" {
+  description = "Name of the GitHub Actions IAM role"
+  value       = aws_iam_role.github_actions_role.name
+}
+
+resource "aws_iam_policy" "misc_policy" {
+  name        = "GitHubActionsMiscPolicy"
+  description = "Miscellaneous permissions for GitHub Actions"
 
   policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
-      # ===== EC2 & Networking =====
       {
-        Sid = "EC2Networking"
-        Effect = "Allow"
-        Action = [
-          "ec2:Describe*",
-          "ec2:Get*",
-          "ec2:CreateVpc",
-          "ec2:DeleteVpc",
-          "ec2:ModifyVpcAttribute",
-          "ec2:CreateSubnet",
-          "ec2:DeleteSubnet",
-          "ec2:CreateRouteTable",
-          "ec2:DeleteRouteTable",
-          "ec2:CreateRoute",
-          "ec2:DeleteRoute",
-          "ec2:CreateInternetGateway",
-          "ec2:DeleteInternetGateway",
-          "ec2:AttachInternetGateway",
-          "ec2:DetachInternetGateway",
-          "ec2:CreateNatGateway",
-          "ec2:DeleteNatGateway",
-          "ec2:AllocateAddress",
-          "ec2:ReleaseAddress",
-          "ec2:AssociateRouteTable",
-          "ec2:DisassociateRouteTable",
-          "ec2:CreateTags",
-          "ec2:DeleteTags"
-        ]
-        Resource = "*"
-      },
-
-      # ===== Security Group Management =====
-      {
-        Sid = "SecurityGroupManagement"
-        Effect = "Allow"
-        Action = [
-          "ec2:CreateSecurityGroup",
-          "ec2:DeleteSecurityGroup",
-          "ec2:AuthorizeSecurityGroupIngress",
-          "ec2:RevokeSecurityGroupIngress",
-          "ec2:AuthorizeSecurityGroupEgress",
-          "ec2:RevokeSecurityGroupEgress",
-          "ec2:DescribeSecurityGroups"
-        ]
-        Resource = "*"
-      },
-
-      # ===== EKS Cluster Management =====
-      {
-        Sid = "EKSClusterManagement"
-        Effect = "Allow"
-        Action = [
-          "eks:CreateCluster",
-          "eks:DescribeCluster",
-          "eks:DeleteCluster",
-          "eks:ListClusters",
-          "eks:UpdateClusterConfig",
-          "eks:UpdateClusterVersion",
-          "eks:CreateNodegroup",
-          "eks:DeleteNodegroup",
-          "eks:DescribeNodegroup",
-          "eks:ListNodegroups",
-          "eks:UpdateNodegroupConfig",
-          "eks:TagResource",
-          "eks:UntagResource"
-        ]
-        Resource = "*"
-      },
-
-      # ===== EKS Addon Management =====
-      {
-        Sid = "EKSAddonManagement"
-        Effect = "Allow"
-        Action = [
-          "eks:CreateAddon",
-          "eks:DescribeAddon",
-          "eks:DeleteAddon",
-          "eks:ListAddons",
-          "eks:UpdateAddon"
-        ]
-        Resource = "*"
-      },
-
-      # ===== EKS IAM Role Management =====
-      {
-        Sid = "EKSRoleManagement"
-        Effect = "Allow"
-        Action = [
-          "iam:CreateServiceLinkedRole",
-          "iam:GetServiceLinkedRoleDeletionStatus"
-        ]
-        Resource = "arn:aws:iam::*:role/aws-service-role/eks.amazonaws.com/AWSServiceRoleForAmazonEKS*"
-      },
-
-      # ===== Load Balancer Management =====
-      {
-        Sid = "LoadBalancerManagement"
-        Effect = "Allow"
-        Action = [
-          "elasticloadbalancing:CreateLoadBalancer",
-          "elasticloadbalancing:DeleteLoadBalancer",
-          "elasticloadbalancing:DescribeLoadBalancers",
-          "elasticloadbalancing:CreateTargetGroup",
-          "elasticloadbalancing:DeleteTargetGroup",
-          "elasticloadbalancing:DescribeTargetGroups",
-          "elasticloadbalancing:CreateListener",
-          "elasticloadbalancing:DeleteListener",
-          "elasticloadbalancing:DescribeListeners",
-          "elasticloadbalancing:ModifyLoadBalancerAttributes",
-          "elasticloadbalancing:ModifyTargetGroupAttributes"
-        ]
-        Resource = "*"
-      },
-
-      # ===== AutoScaling & Launch Templates =====
-      {
-        Sid = "AutoScalingManagement"
-        Effect = "Allow"
-        Action = [
-          "autoscaling:Describe*",
-          "autoscaling:CreateAutoScalingGroup",
-          "autoscaling:DeleteAutoScalingGroup",
-          "autoscaling:UpdateAutoScalingGroup",
-          "autoscaling:CreateLaunchConfiguration",
-          "autoscaling:DeleteLaunchConfiguration",
-          "ec2:DescribeLaunchTemplates",
-          "ec2:CreateLaunchTemplate",
-          "ec2:DeleteLaunchTemplate",
-          "ec2:ModifyLaunchTemplate",
-          "ec2:CreateLaunchTemplateVersion",
-          "ec2:DeleteLaunchTemplateVersion"
-        ]
-        Resource = "*"
-      },
-
-      # ===== S3 Access =====
-      {
-        Sid = "S3BucketRead"
-        Effect = "Allow"
-        Action = [
-          "s3:ListBucket",
-          "s3:GetBucketPolicy",
-          "s3:GetBucketLocation",
-          "s3:GetBucketAcl",
-          "s3:GetBucketCORS",
-          "s3:GetBucketWebsite",
-          "s3:GetBucketVersioning",
-          "s3:GetAccelerateConfiguration"
-        ]
-        Resource = [
-          "arn:aws:s3:::cloudsec-project-tfstate",
-          "arn:aws:s3:::my-ci-cd-artifacts-*"
-        ]
-      },
-      {
-        Sid = "S3TerraformState"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::cloudsec-project-tfstate/prod/terraform.tfstate*"
-        ]
-      },
-      {
-        Sid = "S3ArtifactsWrite"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject"
-        ]
-        Resource = [
-          "arn:aws:s3:::my-ci-cd-artifacts-*/*"
-        ]
-      },
-      {
-        Sid = "S3BucketConfiguration"
-        Effect = "Allow"
-        Action = [
-          "s3:PutBucketVersioning",
-          "s3:PutBucketEncryption",
-          "s3:PutBucketPublicAccessBlock",
-          "s3:PutBucketPolicy"
-        ]
-        Resource = [
-          "arn:aws:s3:::my-ci-cd-artifacts-*",
-          "arn:aws:s3:::cloudsec-project-tfstate"
-        ]
-      },
-
-      # ===== KMS Limited Access =====
-      {
-        Sid = "KMSLimitedAccess"
-        Effect = "Allow"
-        Action = [
-          "kms:CreateKey",
-          "kms:DescribeKey",
-          "kms:ScheduleKeyDeletion",
-          "kms:CreateAlias",
-          "kms:DeleteAlias",
-          "kms:EnableKey",
-          "kms:DisableKey",
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:GenerateDataKey",
-          "kms:ListAliases",
-          "kms:ListKeys",
-          "kms:GetKeyPolicy",
-          "kms:GetKeyRotationStatus",
-          "kms:ListResourceTags"
-        ]
-        Resource = "*"
-      },
-
-      # ===== IAM Access =====
-      {
-        Sid = "IAMReadOnly"
-        Effect = "Allow"
-        Action = [
-          "iam:Get*",
-          "iam:List*"
-        ]
-        Resource = "*"
-      },
-      {
-        Sid = "IAMWriteOperations"
-        Effect = "Allow"
-        Action = [
-          "iam:CreateRole",
-          "iam:DeleteRole",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy",
-          "iam:CreatePolicy",
-          "iam:DeletePolicy",
-          "iam:CreateOpenIDConnectProvider",
-          "iam:DeleteOpenIDConnectProvider",
-          "iam:PassRole"
-        ]
-        Resource = [
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/GitHubActionsRole",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:policy/GitHubActionsPolicy*",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/token.actions.githubusercontent.com",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*eks*",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/*nodegroup*",
-          "arn:aws:iam::${data.aws_caller_identity.current.account_id}:role/prod-eks-cluster-*"
-        ]
-      },
-
-      # ===== CloudWatch Logs =====
-      {
-        Sid = "CloudWatchLogs"
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:DescribeLogGroups",
-          "logs:DeleteLogGroup",
-          "logs:PutRetentionPolicy",
-          "logs:DescribeLogStreams",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents"
-        ]
-        Resource = "arn:aws:logs:*:*:log-group:/aws/eks/*"
-      },
-
-      # ===== ECR Access =====
-      {
-        Sid = "ECRAccess"
-        Effect = "Allow"
-        Action = [
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:GetRepositoryPolicy",
-          "ecr:DescribeRepositories",
-          "ecr:ListImages",
-          "ecr:DescribeImages",
-          "ecr:BatchGetImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload",
-          "ecr:PutImage"
-        ]
-        Resource = "*"
-      },
-
-      # ===== Route53 Access =====
-      {
-        Sid = "Route53Access"
-        Effect = "Allow"
-        Action = [
-          "route53:ChangeResourceRecordSets",
-          "route53:ListResourceRecordSets",
-          "route53:GetHostedZone",
-          "route53:ListHostedZones"
-        ]
-        Resource = "arn:aws:route53:::hostedzone/*"
-      },
-
-      # ===== Secrets Manager =====
-      {
-        Sid = "SecretsManagerAccess"
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret",
-          "secretsmanager:CreateSecret",
-          "secretsmanager:DeleteSecret",
-          "secretsmanager:PutSecretValue",
-          "secretsmanager:TagResource"
-        ]
-        Resource = "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key*"
-      },
-
-      # ===== STS =====
-      {
-        Sid = "StsBasic"
-        Effect = "Allow"
-        Action = [
-          "sts:GetCallerIdentity",
-          "sts:AssumeRole"
-        ]
+        Effect   = "Allow"
+        Action   = ["kms:Encrypt","kms:Decrypt"]
         Resource = "*"
       }
     ]
   })
-}
-
-# 4️⃣ Attach policy to role
-resource "aws_iam_role_policy_attachment" "attach_github_policy" {
-  role       = aws_iam_role.github_actions_role.name
-  policy_arn = aws_iam_policy.github_actions_policy.arn
-}
-
-output "github_actions_role_name" {
-  description = "Name of the GitHub Actions IAM role"
-  value       = aws_iam_role.github_actions_role.name
 }

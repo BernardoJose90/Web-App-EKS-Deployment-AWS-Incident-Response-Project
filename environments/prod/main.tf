@@ -47,7 +47,9 @@ module "github_oidc_role" {
   github_branch  = var.github_branch
   github_repo    = var.github_repo
   kms_key_id     = module.kms.kms_key_id
+  role           = "GitHubActionsRole"   # <--- Add this
 }
+
 /*
 # IAM roles for EKS - ADD THIS MISSING MODULE
 module "eks_iam" {

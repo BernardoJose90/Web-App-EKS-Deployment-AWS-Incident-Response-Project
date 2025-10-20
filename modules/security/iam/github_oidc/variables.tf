@@ -26,3 +26,7 @@ variable "kms_key_id" {
   type        = string
 }
 
+variable "role" {
+  type        = string
+  description = "IAM role name to attach the policy to"
+}
