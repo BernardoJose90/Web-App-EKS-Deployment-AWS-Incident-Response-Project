@@ -19,7 +19,7 @@ module "vpc_london" {
   azs                 = var.azs_london
   tags                = var.tags
   region              = var.region 
-  cluster_name        = var.cluster_name  # Add this for Kubernetes subnet tagging..
+  cluster_name        = var.cluster_name  # Add this for Kubernetes subnet tagging...
 }
 
 # KMS Key for encrypting S3 bucket and GitHub OIDC role...
