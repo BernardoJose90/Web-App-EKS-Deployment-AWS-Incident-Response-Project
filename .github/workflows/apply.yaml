@@ -12,9 +12,6 @@ on:
       cluster_name:
         required: true
         type: string
-      backend_file:
-        required: true
-        type: string
       tfvars_file:
         required: true
         type: string
@@ -44,7 +41,7 @@ jobs:
           role-session-name: "github-actions-${{ github.sha }}"
           audience: "sts.amazonaws.com"
 
-      # 3️⃣ Install jq
+      # 3️⃣ Install jq for parsing JSON secrets
       - name: Install jq
         run: sudo apt-get install -y jq
 
@@ -69,7 +66,11 @@ jobs:
       # 6️⃣ Terraform Init with dynamic backend
       - name: Terraform Init
         working-directory: environments/prod
-        run: terraform init -backend-config="${{ inputs.backend_file }}"
+        run: |
+          terraform init \
+            -backend-config="bucket=${{ inputs.s3_bucket }}" \
+            -backend-config="key=${{ inputs.environment_name }}/terraform.tfstate" \
+            -backend-config="region=${{ inputs.region }}"
 
       # 7️⃣ Terraform Plan
       - name: Terraform Plan
@@ -98,7 +99,6 @@ jobs:
             --sse aws:kms \
             --sse-kms-key-id "${{ env.KMS_KEY_ARN }}"
 
-      # 1️⃣1️⃣ Clean up local kubeconfig
-      - name: Clean up local kubeconfig file
+      # 1️⃣1️⃣ Clean up local kubeconfig file
+      - name: Clean up local kubeconfig
         run: rm -f kubeconfig_${{ inputs.cluster_name }}.yaml
-        
