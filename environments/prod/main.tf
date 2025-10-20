@@ -38,7 +38,7 @@ module "s3_bucket" {
   bucket_name = var.s3_my-ci-cd-artifacts
 }
 
-# GitHub OIDC Role for CI/CD
+# GitHub OIDC Role for CI/CD.
 module "github_oidc_role" {
   source         = "../../modules/security/iam/github_oidc"
   providers      = { aws = aws.london }
