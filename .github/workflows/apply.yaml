@@ -1,4 +1,4 @@
-name: "Terraform Apply"
+name: "Terraform Apply Reusable Workflow"
 
 on:
   workflow_call:
@@ -44,7 +44,7 @@ jobs:
           role-session-name: "github-actions-${{ github.sha }}"
           audience: "sts.amazonaws.com"
 
-      # 3️⃣ Install jq for parsing JSON secrets
+      # 3️⃣ Install jq
       - name: Install jq
         run: sudo apt-get install -y jq
 
@@ -66,7 +66,7 @@ jobs:
         with:
           terraform_version: "1.5.0"
 
-      # 6️⃣ Terraform Init
+      # 6️⃣ Terraform Init with dynamic backend
       - name: Terraform Init
         working-directory: environments/prod
         run: terraform init -backend-config="${{ inputs.backend_file }}"
@@ -98,6 +98,7 @@ jobs:
             --sse aws:kms \
             --sse-kms-key-id "${{ env.KMS_KEY_ARN }}"
 
-      # 1️⃣1️⃣ Clean up local kubeconfig file
+      # 1️⃣1️⃣ Clean up local kubeconfig
       - name: Clean up local kubeconfig file
-        run: rm -f kubeconfig_${{ inputs.cluster_name }}.yaml       
+        run: rm -f kubeconfig_${{ inputs.cluster_name }}.yaml
+        
