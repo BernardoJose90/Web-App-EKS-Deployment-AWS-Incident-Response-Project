@@ -5,7 +5,7 @@ variable "role" {
 
 resource "aws_iam_policy" "s3_policy" {
   name        = "GitHubActionsS3Policy"
-  description = "S3 permissions for GitHub Actions Terraform"
+  description = "S3 permissions for GitHub Actions Terraform backend"
 
   policy = jsonencode({
     Version = "2012-10-17",
@@ -24,7 +24,7 @@ resource "aws_iam_policy" "s3_policy" {
           "s3:GetBucketRequestPayment"
         ],
         Resource = [
-          "arn:aws:s3:::my-ci-cd-artifacts-*"
+          "arn:aws:s3:::cloudsec-project-tfstate"
         ]
       },
       {
@@ -35,7 +35,7 @@ resource "aws_iam_policy" "s3_policy" {
           "s3:DeleteObject"
         ],
         Resource = [
-          "arn:aws:s3:::my-ci-cd-artifacts-*/*"
+          "arn:aws:s3:::cloudsec-project-tfstate/*"
         ]
       },
       {
@@ -47,7 +47,7 @@ resource "aws_iam_policy" "s3_policy" {
           "s3:PutBucketPolicy"
         ],
         Resource = [
-          "arn:aws:s3:::my-ci-cd-artifacts-*"
+          "arn:aws:s3:::cloudsec-project-tfstate"
         ]
       }
     ]
@@ -55,6 +55,6 @@ resource "aws_iam_policy" "s3_policy" {
 }
 
 resource "aws_iam_role_policy_attachment" "attach_s3_policy" {
-  role       = var.role          # ✅ Use the variable, not the hardcoded resource
+  role       = var.role
   policy_arn = aws_iam_policy.s3_policy.arn
 }
