@@ -67,10 +67,11 @@ jobs:
       - name: Terraform Init
         working-directory: environments/prod
         run: |
-          terraform init \
+          terraform init -reconfigure \
             -backend-config="bucket=${{ inputs.s3_bucket }}" \
             -backend-config="key=${{ inputs.environment_name }}/terraform.tfstate" \
             -backend-config="region=${{ inputs.region }}"
+    
 
       # 7️⃣ Terraform Plan
       - name: Terraform Plan
