@@ -63,7 +63,12 @@ resource "aws_iam_policy" "github_actions_full_policy" {
           "s3:GetObject",
           "s3:PutObject",
           "s3:GetBucketVersioning",
-          "s3:GetBucketLocation"
+          "s3:GetBucketLocation",
+          "s3:GetBucketPolicy",
+          "s3:PutBucketPolicy",
+          "s3:PutBucketVersioning",
+          "s3:PutBucketEncryption",
+          "s3:PutBucketPublicAccessBlock"
         ]
         Resource = [
           "arn:aws:s3:::cloudsec-project-tfstate",
@@ -79,6 +84,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
           "s3:GetObject",
           "s3:PutObject",
           "s3:DeleteObject",
+          "s3:GetBucketPolicy",
           "s3:PutBucketPolicy",
           "s3:PutBucketVersioning",
           "s3:PutBucketEncryption",
@@ -101,6 +107,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
           "ec2:DescribeInternetGateways",
           "ec2:DescribeNatGateways",
           "ec2:DescribeAddresses",
+          "ec2:DescribeAddressesAttribute",
           "ec2:DescribeNetworkAcls",
           "ec2:DescribeKeyPairs"
         ]
@@ -114,7 +121,8 @@ resource "aws_iam_policy" "github_actions_full_policy" {
           "kms:Encrypt",
           "kms:Decrypt",
           "kms:GenerateDataKey",
-          "kms:DescribeKey"
+          "kms:DescribeKey",
+          "kms:GetKeyPolicy"
         ]
         Resource = "*"
       },
@@ -134,7 +142,8 @@ resource "aws_iam_policy" "github_actions_full_policy" {
         ]
         Resource = "*"
       },
-      # 7️⃣ Secrets Manager access
+
+      # Secrets Manager access
       {
         Effect = "Allow"
         Action = [
@@ -144,6 +153,17 @@ resource "aws_iam_policy" "github_actions_full_policy" {
         Resource = [
           "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key-*"
         ]
+      },
+
+      # IAM / OIDC read access
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:GetRole",
+          "iam:GetPolicy",
+          "iam:GetOpenIDConnectProvider"
+        ]
+        Resource = "*"
       },
 
       # Optional CloudWatch logs for monitoring
