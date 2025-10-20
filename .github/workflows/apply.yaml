@@ -3,10 +3,7 @@ name: "Terraform Apply"
 on:
   workflow_call:
     inputs:
-      backend_file:
-        required: true
-        type: string
-      tfvars_file:
+      region:
         required: true
         type: string
       environment_name:
@@ -15,13 +12,16 @@ on:
       cluster_name:
         required: true
         type: string
+      backend_file:
+        required: true
+        type: string
+      tfvars_file:
+        required: true
+        type: string
       s3_bucket:
         required: true
         type: string
-      kms_key_arn:
-        required: true
-        type: string
-      kms_key_id:
+      kms_secret_name:
         required: true
         type: string
 
@@ -32,76 +32,72 @@ jobs:
 
     steps:
       # 1️⃣ Checkout code
-      - name: "Checkout code"
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials (inherit from parent)
-      - name: "Configure AWS credentials"
+      # 2️⃣ Configure AWS credentials via OIDC
+      - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
-          aws-region: "eu-west-2"
+          aws-region: ${{ inputs.region }}
           role-session-name: "github-actions-${{ github.sha }}"
+          audience: "sts.amazonaws.com"
 
-      # 3️⃣ Debug: Print input variables
-      - name: "Print inputs"
+      # 3️⃣ Install jq for parsing JSON secrets
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      # 4️⃣ Fetch KMS Key from Secrets Manager
+      - name: Fetch KMS Key from Secrets Manager
+        id: get_kms
         run: |
-          echo "backend_file=${{ inputs.backend_file }}"
-          echo "tfvars_file=${{ inputs.tfvars_file }}"
-          echo "environment_name=${{ inputs.environment_name }}"
-          echo "cluster_name=${{ inputs.cluster_name }}"
-          echo "s3_bucket=${{ inputs.s3_bucket }}"
-          echo "kms_key_arn=${{ inputs.kms_key_arn }}"
-          echo "kms_key_id=${{ inputs.kms_key_id }}"
+          secret_json=$(aws secretsmanager get-secret-value \
+            --secret-id "${{ inputs.kms_secret_name }}" \
+            --query SecretString --output text)
+          KMS_KEY_ARN=$(echo $secret_json | jq -r '.KMS_KEY_ARN')
+          KMS_KEY_ID=$(echo $secret_json | jq -r '.KMS_KEY_ID')
+          echo "KMS_KEY_ARN=$KMS_KEY_ARN" >> $GITHUB_ENV
+          echo "KMS_KEY_ID=$KMS_KEY_ID" >> $GITHUB_ENV
 
-      # 4️⃣ Setup Terraform
-      - name: "Setup Terraform"
+      # 5️⃣ Setup Terraform
+      - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.0"
 
-      # 5️⃣ Fetch AWS Account ID
-      - name: "Get AWS Account ID"
-        id: get_account
-        run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-          echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID" >> $GITHUB_ENV
-          echo "Account ID: $AWS_ACCOUNT_ID"
-
-      # 6️⃣ Terraform init
-      - name: "Terraform Init"
+      # 6️⃣ Terraform Init
+      - name: Terraform Init
+        working-directory: environments/prod
         run: terraform init -backend-config="${{ inputs.backend_file }}"
 
-      # 7️⃣ Terraform plan
-      - name: "Terraform Plan"
-        run: terraform plan -var-file="${{ inputs.tfvars_file }}" -out=tfplan
+      # 7️⃣ Terraform Plan
+      - name: Terraform Plan
+        working-directory: environments/prod
+        run: terraform plan -var-file="${{ inputs.tfvars_file }}" -out=tfplan -var="region=${{ inputs.region }}"
 
-      # 8️⃣ Terraform apply
-      - name: "Terraform Apply"
+      # 8️⃣ Terraform Apply
+      - name: Terraform Apply
+        working-directory: environments/prod
         run: terraform apply -auto-approve tfplan
 
-      # 9️⃣ Generate kubeconfig (using aws eks update-kubeconfig)
-      - name: "Generate kubeconfig"
+      # 9️⃣ Generate kubeconfig
+      - name: Generate kubeconfig
         run: |
-          # Update kubeconfig for the EKS cluster
           aws eks update-kubeconfig \
-            --region eu-west-2 \
+            --region ${{ inputs.region }} \
             --name ${{ inputs.cluster_name }}
-          
-          # Verify cluster access
-          kubectl get nodes || echo "kubectl check failed!"
+          kubectl get nodes || echo "kubectl check failed"
 
-    
-      # 🔟 Upload kubeconfig to S3 with a KMS encryption.
-      - name: "Upload kubeconfig to S3"
+      # 🔟 Upload kubeconfig to S3 with KMS encryption
+      - name: Upload kubeconfig to S3
         run: |
-          # Get the current kubeconfig and save it
           kubectl config view --minify --flatten > kubeconfig_${{ inputs.cluster_name }}.yaml
-          
-          # Upload to S3 with KMS encryption
           aws s3 cp kubeconfig_${{ inputs.cluster_name }}.yaml \
             "s3://${{ inputs.s3_bucket }}/${{ inputs.environment_name }}/kubeconfig.yaml" \
             --sse aws:kms \
-            --sse-kms-key-id "${{ inputs.kms_key_arn }}"
-          
-          echo "Kubeconfig uploaded to S3 with KMS encryption"
+            --sse-kms-key-id "${{ env.KMS_KEY_ARN }}"
+
+      # 1️⃣1️⃣ Clean up local kubeconfig file
+      - name: Clean up local kubeconfig file
+        run: rm -f kubeconfig_${{ inputs.cluster_name }}.yaml       
