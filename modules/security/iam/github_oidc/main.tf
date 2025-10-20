@@ -142,7 +142,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
           "secretsmanager:DescribeSecret"
         ]
         Resource = [
-          "arn:aws:secretsmanager:eu-west-2:123456789012:secret:prod/kms-key-*"
+          "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key-*"
         ]
       },
 
