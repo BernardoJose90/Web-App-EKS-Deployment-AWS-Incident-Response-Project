@@ -71,15 +71,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "s3:ListBucket",
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:GetBucketPolicy",
-          "s3:PutBucketPolicy",
-          "s3:PutBucketVersioning",
-          "s3:PutBucketEncryption",
-          "s3:PutBucketPublicAccessBlock"
+          "s3:*"
         ]
         Resource = [
           "arn:aws:s3:::my-ci-cd-artifacts-*",
@@ -109,14 +101,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "eks:DescribeCluster",
-          "eks:ListClusters",
-          "eks:ListNodegroups",
-          "eks:DescribeNodegroup",
-          "eks:CreateNodegroup",
-          "eks:DeleteNodegroup",
-          "eks:UpdateClusterConfig",
-          "eks:UpdateNodegroupConfig"
+          "eks:*"
         ]
         Resource = "*"
       },
