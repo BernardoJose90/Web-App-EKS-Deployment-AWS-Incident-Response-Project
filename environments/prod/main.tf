@@ -5,7 +5,7 @@ terraform {
 # Get the current AWS caller identity for IAM context
 data "aws_caller_identity" "current" {}
 
-# Deploy London VPC with public/private subnets and EKS-specific subnets.
+# Deploy London VPC with public/private subnets and EKS-specific subnets...
 module "vpc_london" {
   source    = "../../modules/network"
   providers = { aws = aws.london }
