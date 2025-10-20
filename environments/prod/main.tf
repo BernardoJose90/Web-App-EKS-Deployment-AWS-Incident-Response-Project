@@ -5,7 +5,7 @@ terraform {
 # Get the current AWS caller identity for IAM context..
 data "aws_caller_identity" "current" {}
 
-# Deploy London VPC with public/private subnets and EKS-specific subnets...
+# Deploy London VPC with public/private subnets and EKS-specific subnets....
 module "vpc_london" {
   source    = "../../modules/network"
   providers = { aws = aws.london }
@@ -22,7 +22,7 @@ module "vpc_london" {
   cluster_name        = var.cluster_name  # Add this for Kubernetes subnet tagging...
 }
 
-# KMS Key for encrypting S3 bucket and GitHub OIDC role...
+# KMS Key for encrypting S3 bucket and GitHub OIDC role....
 module "kms" {
   source         = "../../modules/security/kms"
   providers      = { aws = aws.london }
