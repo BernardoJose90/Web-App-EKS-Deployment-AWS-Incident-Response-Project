@@ -59,16 +59,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "s3:ListBucket",
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:GetBucketVersioning",
-          "s3:GetBucketLocation",
-          "s3:GetBucketPolicy",
-          "s3:PutBucketPolicy",
-          "s3:PutBucketVersioning",
-          "s3:PutBucketEncryption",
-          "s3:PutBucketPublicAccessBlock"
+          "s3:*"
         ]
         Resource = [
           "arn:aws:s3:::cloudsec-project-tfstate",
@@ -100,16 +91,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "ec2:DescribeVpcs",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeSecurityGroups",
-          "ec2:DescribeRouteTables",
-          "ec2:DescribeInternetGateways",
-          "ec2:DescribeNatGateways",
-          "ec2:DescribeAddresses",
-          "ec2:DescribeAddressesAttribute",
-          "ec2:DescribeNetworkAcls",
-          "ec2:DescribeKeyPairs"
+          "ec2:*"
         ]
         Resource = "*"
       },
@@ -118,11 +100,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:GenerateDataKey",
-          "kms:DescribeKey",
-          "kms:GetKeyPolicy"
+          "kms:*"
         ]
         Resource = "*"
       },
@@ -147,8 +125,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret"
+          "secretsmanager:*"
         ]
         Resource = [
           "arn:aws:secretsmanager:eu-west-2:${data.aws_caller_identity.current.account_id}:secret:prod/kms-key-*"
@@ -159,9 +136,7 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "iam:GetRole",
-          "iam:GetPolicy",
-          "iam:GetOpenIDConnectProvider"
+          "iam:*"
         ]
         Resource = "*"
       },
@@ -170,11 +145,8 @@ resource "aws_iam_policy" "github_actions_full_policy" {
       {
         Effect = "Allow"
         Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
+          "logs:*"
+
         ]
         Resource = "*"
       }
