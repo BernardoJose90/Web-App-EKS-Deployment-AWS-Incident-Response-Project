@@ -1,28 +1,31 @@
-name: "Prod Terraform + EKS CI"
+name: "Terraform + EKS CI/CD"
 
 on:
-  push:
-    branches:
-      - "main"
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'AWS region to deploy (London/Ireland)'
+        required: true
+        default: 'eu-west-2'
 
 permissions:
   id-token: write
   contents: read
 
 env:
-  AWS_REGION: eu-west-2   # 👈 Change this once to switch region (London/Ireland)
+  AWS_REGION: ${{ github.event.inputs.region }}
 
 jobs:
-  apply:
+  terraform_apply:
     runs-on: ubuntu-latest
     environment: "production"
 
     steps:
-      # 1️⃣ Checkout the code..
+      # 1️⃣ Checkout repository
       - name: "Checkout code"
         uses: actions/checkout@v4
 
-      # 2️⃣ Configure AWS credentials via OIDC..
+      # 2️⃣ Configure AWS credentials via OIDC
       - name: "Configure AWS credentials using OIDC"
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -31,12 +34,12 @@ jobs:
           role-session-name: "github-actions-${{ github.sha }}"
           audience: "sts.amazonaws.com"
 
-      # 3️⃣ Install jq for Secrets Manager
+      # 3️⃣ Install jq
       - name: "Install jq"
         run: sudo apt-get install -y jq
 
-      # 4️⃣ Fetch KMS Key ARN from Secrets Manager.
-      - name: "Get KMS Key ARN from Secrets Manager"
+      # 4️⃣ Fetch KMS Key ARN from Secrets Manager
+      - name: "Get KMS Key ARN"
         id: get_kms
         run: |
           kms_key_arn=$(aws secretsmanager get-secret-value \
@@ -47,43 +50,46 @@ jobs:
           kms_key_id=$(echo "$kms_key_arn" | cut -d'/' -f2)
           echo "KMS_KEY_ID=$kms_key_id" >> $GITHUB_ENV
 
-      # 5️⃣ Setup Terraform.
+      # 5️⃣ Setup Terraform
       - name: "Setup Terraform"
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: "1.5.0"
 
-      # 6️⃣ Terraform Init with dynamic backend config.
+      # 6️⃣ Terraform Init with backend locking
       - name: "Terraform Init"
         working-directory: environments/prod
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Terraform files:"
-          ls -la *.tf
-          echo "Initializing backend for region: ${AWS_REGION}"
+          echo "Initializing Terraform backend in ${AWS_REGION}..."
           terraform init \
             -backend-config="bucket=cloudsec-project-tfstate" \
             -backend-config="key=prod/terraform.tfstate" \
-            -backend-config="region=${AWS_REGION}"
+            -backend-config="region=${AWS_REGION}" \
+            -backend-config="dynamodb_table=terraform-locks"
 
+      # 7️⃣ Terraform Plan
       - name: "Terraform Plan"
         working-directory: environments/prod
         run: |
-          echo "Running Terraform plan from: $(pwd)"
-          terraform plan -var-file="prod.tfvars" -out=tfplan -var="region=${AWS_REGION}"
+          echo "Planning Terraform changes..."
+          terraform plan -var-file="prod.tfvars" -out=tfplan \
+            -var="region_london=${AWS_REGION}" \
+            -var="region_ireland=${AWS_REGION}"
 
+      # 8️⃣ Terraform Apply
       - name: "Terraform Apply"
         working-directory: environments/prod
         run: terraform apply -auto-approve tfplan
 
-      # 7️⃣ Debug: List created resources..
-      - name: "Debug: List Terraform resources"
+      # 9️⃣ Debug: List Terraform state & AWS resources
+      - name: "Debug: Terraform state and AWS resources"
         working-directory: environments/prod
         run: |
           echo "=== Terraform State List ==="
           terraform state list || echo "No resources in state yet"
           
           echo "=== AWS EKS Clusters ==="
-          aws eks list-clusters --region ${AWS_REGION} || echo "EKS command failed - may not have clusters yet"
+          aws eks list-clusters --region ${AWS_REGION} || echo "EKS command failed"
+          
           echo "=== AWS S3 Buckets ==="
-          aws s3 ls || echo "S3 command failed - may not have buckets yet"
+          aws s3 ls || echo "S3 command failed"

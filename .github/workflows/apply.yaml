@@ -91,7 +91,8 @@ jobs:
           # Verify cluster access
           kubectl get nodes || echo "kubectl check failed!"
 
-      # 🔟 Upload kubeconfig to S3 with KMS encryption
+    
+      # 🔟 Upload kubeconfig to S3 with a KMS encryption.
       - name: "Upload kubeconfig to S3"
         run: |
           # Get the current kubeconfig and save it
