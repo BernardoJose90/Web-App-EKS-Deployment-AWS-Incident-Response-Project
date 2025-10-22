@@ -65,7 +65,7 @@ jobs:
 
       # 6️⃣ Terraform Init with dynamic backend
       - name: Terraform Init
-        working-directory: environments/prod
+        working-directory: environments/prod/eu-west-2-london
         run: |
           terraform init -reconfigure \
             -backend-config="bucket=${{ inputs.s3_bucket }}" \
@@ -75,12 +75,12 @@ jobs:
 
       # 7️⃣ Terraform Plan
       - name: Terraform Plan
-        working-directory: environments/prod
+        working-directory: environments/prod/eu-west-2-london
         run: terraform plan -var-file="${{ inputs.tfvars_file }}" -out=tfplan -var="region=${{ inputs.region }}"
 
       # 8️⃣ Terraform Apply
       - name: Terraform Apply
-        working-directory: environments/prod
+        working-directory: environments/prod/eu-west-2-london
         run: terraform apply -auto-approve tfplan
 
       # 9️⃣ Generate kubeconfig

@@ -19,8 +19,11 @@ subnet_ids = ["dummy-id"]
 
 # EKS Cluster Configuration.
 cluster_name = "prod-eks-cluster" 
+instance_types = [ "t2.micro" ]
+capacity_type="SPOT"
 kubernetes_version = "1.29"
 
+  
 # Network settings
 endpoint_public_access = true
 endpoint_private_access = true

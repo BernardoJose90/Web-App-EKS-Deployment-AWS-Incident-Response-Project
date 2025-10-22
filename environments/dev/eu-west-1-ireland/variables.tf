@@ -61,6 +61,15 @@ variable "node_groups" {
   default = {}
 }
 
+variable "instance_types" {
+  description = "List of instance types for the node group"
+  type        = list(string)
+}
+
+variable "capacity_type" {
+  description = "Type of capacity for the node group (ON_DEMAND or SPOT)"
+  type        = string
+}
 # London-specific network variables
 variable "vpc_cidr_london" {
   description = "CIDR block for the London VPC"
@@ -96,7 +105,7 @@ variable "vpc_name" {
 variable "region" {
   description = "AWS region to use for this environment"
   type        = string
-  default     = "eu-west-2"
+  default     = "eu-west-1"
 }
 
 

@@ -11,9 +11,10 @@ resource "aws_vpc" "main" {
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
   enable_dns_support   = true
-  tags                 = merge(var.tags, { Name = "${var.vpc_name}-vpc" })
+  tags                 = merge(var.tags, { Name = "${var.vpc_name}" })
 }
 
+/*
 # Data source for the default/main route table
 data "aws_route_tables" "main_for_vpc" {
   filter {
@@ -32,7 +33,7 @@ resource "aws_ec2_tag" "default_rt_name" {
   key         = "Name"
   value       = "${var.vpc_name}-default-rt"
 }
-
+*/
 # Public Subnets
 resource "aws_subnet" "public" {
   count                   = length(var.public_subnets)
@@ -62,7 +63,7 @@ resource "aws_subnet" "private" {
   )
 }
 
-# EKS Public Subnets (REMOVED DUPLICATE - KEEP THIS VERSION)
+# EKS Public Subnets 
 resource "aws_subnet" "eks_public" {
   count                   = length(var.eks_public_subnets)
   vpc_id                  = aws_vpc.main.id

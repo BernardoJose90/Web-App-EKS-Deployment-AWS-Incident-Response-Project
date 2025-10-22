@@ -8,7 +8,7 @@ data "aws_caller_identity" "current" {}
 # 1. Deploy London VPC with public/private subnets and EKS-specific subnets....
 module "vpc_london" {
   source    = "../../../modules/network"
-  providers = { aws = aws.london }# this is used to specify region to deploy this module
+  providers = { aws = aws.london }
 
   vpc_name            = var.vpc_name
   vpc_cidr            = var.vpc_cidr_london
@@ -18,7 +18,7 @@ module "vpc_london" {
   eks_private_subnets = var.eks_private_subnets_london
   azs                 = var.azs_london
   tags                = var.tags
-  region              = var.region  # this region veriable is used for tagging purpose
+  region              = var.region  
   cluster_name        = var.cluster_name  # Add this for Kubernetes subnet tagging...
 }
 

@@ -105,7 +105,7 @@ variable "vpc_name" {
 variable "region" {
   description = "AWS region to use for this environment"
   type        = string
-  default     = "eu-west-2"
+  default     = "eu-west-1"
 }
 
 
