@@ -4,6 +4,7 @@
 provider "aws" {
   alias  = "london"
   region = var.region
+  profile = "terraform-user"
 }
 
 

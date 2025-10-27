@@ -36,7 +36,7 @@ jobs:
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: "arn:aws:iam::851725622142:role/GitHubActionsRole"
+          role-to-assume: "arn:aws:iam::<management-account-id>:role/TerraformExecutionRole"
           aws-region: ${{ inputs.region }}
           role-session-name: "github-actions-${{ github.sha }}"
           audience: "sts.amazonaws.com"

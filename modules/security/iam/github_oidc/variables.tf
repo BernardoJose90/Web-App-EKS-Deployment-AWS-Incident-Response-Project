@@ -1,32 +1,23 @@
-
-
-variable "aws_account_id" {
-  description = "AWS account ID where the role will be created"
+variable "role_name" {
   type        = string
-}
-
-variable "github_org" {
-  description = "GitHub organization name"
-  type        = string
+  description = "Name of the Terraform execution role"
 }
 
 variable "github_repo" {
-  description = "GitHub repository name"
+  
   type        = string
+  description = "GitHub repository in format owner/repo"
 }
 
 variable "github_branch" {
-  description = "GitHub branch allowed to assume the role"
+
   type        = string
+  description = "GitHub branch to allow access"
   default     = "main"
 }
 
-variable "kms_key_id" {
-  description = "KMS Key ID for S3 encryption"
+variable "policy_arn" {
   type        = string
-}
-
-variable "role" {
-  type        = string
-  description = "IAM role name to attach the policy to"
+  description = "AWS managed policy ARN to attach to the role"
+  default     = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

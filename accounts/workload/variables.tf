@@ -96,6 +96,32 @@ variable "eks_private_subnets_london" {
   type        = list(string)
 }
 
+# ireland-specific network variables
+variable "vpc_cidr_ireland" {
+  description = "CIDR block for the London VPC"
+  type        = string
+}
+
+variable "public_subnets_ireland" {
+  description = "Public subnets for London"
+  type        = list(string)
+}
+
+variable "private_subnets_ireland" {
+  description = "Private subnets for London"
+  type        = list(string)
+}
+
+variable "eks_public_subnets_irelandn" {
+  description = "EKS public subnets for load balancers in London"
+  type        = list(string)
+}
+
+variable "eks_private_subnets_ireland" {
+  description = "EKS private subnets for worker nodes in London"
+  type        = list(string)
+}
+
 # Other variables
 variable "vpc_name" {
   description = "Name of the VPC"
@@ -105,7 +131,6 @@ variable "vpc_name" {
 variable "region" {
   description = "AWS region to use for this environment"
   type        = string
-  default     = "eu-west-1"
 }
 
 
@@ -132,23 +157,9 @@ variable "key_name" {
   type        = string
 }
 
-variable "s3_my-ci-cd-artifacts" {
-  description = "S3 bucket name for CI/CD artifacts"
+variable "environment" {
   type        = string
+  description = "Environment name"
 }
 
-variable "github_org" {
-  description = "GitHub organization"
-  type        = string
-}
-
-variable "github_repo" {
-  description = "GitHub repository"
-  type        = string
-}
-
-variable "github_branch" {
-  description = "GitHub branch"
-  type        = string
-}
 

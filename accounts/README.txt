@@ -3,4 +3,4 @@ accounts/
 ├── management/        # AWS Organizations master account
 ├── security/          # Central security tools account
 ├── network/           # Shared networking account  
-└── shared-services/   # CI/CD, ECR, shared resources
+└── shared-services/   # Shared services account 
